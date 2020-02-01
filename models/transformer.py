@@ -33,7 +33,8 @@ class TransformerLayer(nn.Module):
     def forward(self, x, 
                 self_padding_mask = None, self_attn_mask = None,
                 external_memories = None, external_padding_mask=None,
-                need_weights = False):
+                need_weights=False):
+        """ returns: x, self_att or src_att """
         # x: seq_len x bsz x embed_dim
         residual = x
         x, self_attn = self.self_attn(query=x, key=x, value=x, key_padding_mask=self_padding_mask, attn_mask=self_attn_mask, need_weights = need_weights)

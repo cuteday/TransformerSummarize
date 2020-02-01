@@ -77,6 +77,7 @@ class LabelSmoothing(nn.Module):
             支持扩展词典, 比如copy机制使用的src词典
             input size: bsz*seq_en, vocab
             normalize: 一般是词的数量 即每个词的重要性相同
+            return: 0维tensor
         """
         real_size = output.size(1)  
         if real_size > self.size:
