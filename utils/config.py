@@ -32,11 +32,11 @@ def init_config(args):
         'max_grad_norm': 2.0,
 
         'learning_rate': 0.03,
-        'batch_size': 5,
+        'batch_size': 6,
         'beam_size': 5,
-        'validate_every': 2000,
+        'validate_every': 5000,
         'report_every': 10,
-        'save_every': 2000,
+        'save_every': 5000,
         'train_epoch': 1,
 
     }

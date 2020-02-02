@@ -94,13 +94,13 @@ class LabelSmoothing(nn.Module):
         model_prob.scatter_(1, target, self.confidence)
         model_prob.masked_fill_((target == self.padding_idx), 0.)
 
-        return F.kl_div(output, model_prob, reduction='sum').div(float(normalize))   
+        return F.kl_div(output, model_prob, reduction='sum')/float(normalize)
 
 class LayerNorm(nn.Module):
     """
         LayerNorm的原型函数... !资料仅供学习使用!
         说的那么麻烦...其实就是沿最后一维作标准化
-        为了不让取值集中在0附近(失去激活函数的线性性质), 它还非常贴心地添加了平移和缩放功能...!
+        为了不让取值集中在0附近(失去激活函数的非线性性质), 它还非常贴心地添加了平移和缩放功能...!
     """
     def __init__(self, hidden_size, eps=1e-12):
         super(LayerNorm, self).__init__()

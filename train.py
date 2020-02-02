@@ -4,6 +4,7 @@ import torch
 from torch.nn.utils import clip_grad_norm_
 from torch.optim import Adagrad
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from data import CNNDMDataset, Collate, Vocab
 from utils.data_utils import get_input_from_batch, get_output_from_batch
@@ -69,19 +70,18 @@ class Trainer:
 
                 if self.step % config['report_every'] == 0:
                     logging("Step %d Train loss %.3f"%(self.step, running_avg_loss))    
-                if self.step % config['validate_every'] == 0:
-                    self.validate()
                 if self.step % config['save_every'] == 0:
                     self.save(self.step)
-                if self.step % config['test_every'] == 0:
-                    pass
+                if self.step % config['validate_every'] == 0:
+                    self.validate()
+
 
     @torch.no_grad()
     def validate(self):
         self.model.eval()
         validate_loader = DataLoader(self.validate_data, batch_size=self.config['batch_size'], shuffle=False, collate_fn=Collate())
         losses = []
-        for batch in validate_loader:
+        for batch in tqdm(validate_loader):
             loss = self.train_one(batch)
             losses.append(loss.item())
         self.model.train()

@@ -35,7 +35,6 @@ class TransformerLayer(nn.Module):
                 need_weights=False):
         """ returns: x, self_att or src_att """
         # x: seq_len x bsz x embed_dim
-        print('hello a layer')
         residual = x
         x, self_attn = self.self_attn(query=x, key=x, value=x, key_padding_mask=self_padding_mask, attn_mask=self_attn_mask, need_weights = need_weights)
 

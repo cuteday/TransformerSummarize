@@ -12,7 +12,7 @@ def make_vocab(wc, vocab_size):
     word2id, id2word = {}, {}
     for i, t in enumerate(special_tokens):
         word2id[t], id2word[i] = i, t
-    for i, (w, _) in enumerate(wc.most_common(vocab_size), 4):
+    for i, (w, _) in enumerate(wc.most_common(vocab_size - len(special_tokens)), len(special_tokens)):
         word2id[w], id2word[i] = i, w
     return word2id, id2word
 
