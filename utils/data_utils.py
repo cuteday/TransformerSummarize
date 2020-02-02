@@ -76,7 +76,7 @@ def pad_sequence(data, padding_idx=0, length = 0):
     
 ##### 以下函数中的Variable全部可以删去 #####
 
-def get_input_from_batch(batch, config, device):
+def get_input_from_batch(batch, config, device, batch_first = False):
     """
         returns: enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage
         如果config没有启用pointer 和cov 则相应的项返回None
@@ -111,9 +111,13 @@ def get_input_from_batch(batch, config, device):
     if coverage is not None:
         coverage = coverage.to(device)
 
+    if not batch_first:
+        enc_batch.transpose_(0, 1)
+        enc_pad_mask.transpose_(0, 1)
+
     return enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage
 
-def get_output_from_batch(batch, device):
+def get_output_from_batch(batch, device, batch_first = False):
     """ returns: dec_batch, dec_pad_mask, max_dec_len, dec_lens_var, tgt_batch """
     dec_batch = Variable(batch.dec_inp.long())
     dec_pad_mask = Variable(batch.dec_pad_mask).float()
@@ -129,5 +133,9 @@ def get_output_from_batch(batch, device):
     dec_pad_mask = dec_pad_mask.to(device)
     tgt_batch = tgt_batch.to(device)
     dec_lens_var = dec_lens_var.to(device)
+
+    if not batch_first:
+        dec_batch.transpose_(0, 1)
+        tgt_batch.transpose_(0, 1)
 
     return dec_batch, dec_pad_mask, max_dec_len, dec_lens_var, tgt_batch

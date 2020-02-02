@@ -119,10 +119,3 @@ class LayerNorm(nn.Module):
         x = (x - u) / torch.sqrt(s + self.eps)
         return self.weight * x + self.bias
 
-def gelu(x):
-    """
-        GeLU(x) = x * \\phi(x)  
-        phi(x)是正态概率分布函数, 即error function
-    """
-    cdf = 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
-    return cdf*x

@@ -98,6 +98,3 @@ class Trainer:
         logging('Saving model step %d to %s...'%(step, save_path))
         torch.save(state, save_path)
 
-def train(config):
-    trainer = Trainer(config)
-    trainer.train()

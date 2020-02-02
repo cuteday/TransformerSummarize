@@ -121,10 +121,10 @@ class BeamSearch(object):
         steps = 0
         while steps < config['max_dec_steps'] and len(results) < config['beam_size']:
 
-            hyp_tokens = [h.tokens for h in beams]
+            hyp_tokens = torch.tensor([h.tokens for h in beams],device=config['device']).transpose(0,1) # NOT batch first
             pred = self.model.decode(hyp_tokens, encoder_outputs, enc_padding_mask)
 
-            log_probs = torch.log(pred[:,-1,:])         # get probs for next token
+            log_probs = torch.log(pred[-1,:,:])         # get probs for next token
             topk_log_probs, topk_ids = torch.topk(log_probs, config['beam_size'] * 2)  # 为什么是2? 防止全部是<end>的极端情况
 
             all_beams = []

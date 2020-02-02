@@ -32,8 +32,8 @@ class Model(nn.Module):
         self.label_smoothing = LabelSmoothing(self.device, self.vocab_size, self.padding_idx, self.smoothing)
 
         for _ in range(self.num_layers):
-            self.enc_layers.append(TransformerLayer(self.embed_dim, self.d_ff,self.num_heads,self.dropout))
-            self.dec_layers.append(TransformerLayer(self.embed_dim, self.d_ff,self.num_heads,self.dropout, with_external=True))
+            self.enc_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,self.dropout))
+            self.dec_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,self.dropout, with_external=True))
 
     def reset_parameters(self):
         #init_uniform_weight(self.word_embed.weight)
@@ -49,7 +49,8 @@ class Model(nn.Module):
         # KL散度需要预测概率过log...
         pred = torch.log(pred.clamp(min=1e-8))  # 方便实用的截断函数 (这名字让人想起CLAMP 
         # 本损失函数中, 每个词的损失不对seqlen作规范化
-        return self.label_smoothing(pred.view(seq_len * bsz, -1), gold.view(seq_len * bsz, -1), mask.sum())
+        return self.label_smoothing(pred.view(seq_len * bsz, -1),
+                    gold.contiguous().view(seq_len * bsz, -1), mask.sum())
         
     def nll_loss(self, pred:torch.Tensor, gold, mask = None):
         """
@@ -65,9 +66,9 @@ class Model(nn.Module):
         return gold_prob.mean()
 
     def encode(self, inputs):
+        padding_mask = inputs.eq(self.padding_idx)
         x = self.word_embed(inputs) + self.pos_embed(inputs)
         x = F.dropout(self.emb_layer_norm(x), self.dropout, self.training)  #embed dropout
-        padding_mask = x.eq(self.padding_idx)
 
         for layer in self.enc_layers:
             x, _, _ = layer(x, self_padding_mask=padding_mask)
@@ -77,11 +78,12 @@ class Model(nn.Module):
     def decode(self, inputs, src, src_padding_mask):
         """ copy not implemented """
         seqlen, _ = inputs.size()
-        x = self.word_embed(inputs) + self.pos_embed(inputs)
-        x = F.dropout(self.emb_layer_norm(x), self.dropout, self.training)
         if not self.is_predicting:
             padding_mask = inputs.eq(self.padding_idx)
         else: padding_mask = None
+        x = self.word_embed(inputs) + self.pos_embed(inputs)
+        x = F.dropout(self.emb_layer_norm(x), self.dropout, self.training)
+        
         self_attn_mask = self.attn_mask(seqlen)
 
         for layer in self.dec_layers:

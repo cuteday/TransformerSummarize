@@ -5,6 +5,7 @@ def init_config(args):
     config = {
         'train_from': '',
         'test_from': '',
+        'data_path': variables.CNNDMPath,
         'vocab_file': variables.CNNDMPath + '/vocab_cnt.pkl',
         'model_path': '../saved_models',
         'log_path': '../results',
@@ -22,7 +23,7 @@ def init_config(args):
         'coverage': False,
 
         'hidden_size': 512,
-        'emb_dim': 768,
+        'emb_dim': 512,
         'd_ff': 1024,
         'num_layers': 6,
         'num_heads': 8,
@@ -30,12 +31,13 @@ def init_config(args):
         'dropout': 0.1,
         'max_grad_norm': 2.0,
 
-        'learning_rate': 0.15,
-        'batch_size': 32,
+        'learning_rate': 0.03,
+        'batch_size': 5,
         'beam_size': 5,
-        'validate_every': 1,
-        'report_every': 1,
-        'save_every': 1,
+        'validate_every': 2000,
+        'report_every': 10,
+        'save_every': 2000,
+        'train_epoch': 1,
 
     }
     for key in args.keys():

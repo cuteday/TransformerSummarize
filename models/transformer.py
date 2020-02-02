@@ -3,7 +3,6 @@ from torch import nn
 from torch.nn import Parameter
 import torch.nn.functional as F
 import math
-from models.modules import gelu
 
 class TransformerLayer(nn.Module):
     
@@ -36,6 +35,7 @@ class TransformerLayer(nn.Module):
                 need_weights=False):
         """ returns: x, self_att or src_att """
         # x: seq_len x bsz x embed_dim
+        print('hello a layer')
         residual = x
         x, self_attn = self.self_attn(query=x, key=x, value=x, key_padding_mask=self_padding_mask, attn_mask=self_attn_mask, need_weights = need_weights)
 
@@ -87,7 +87,7 @@ class MultiheadAttention(nn.Module):
 
     def forward(self, query, key, value, key_padding_mask=None, attn_mask=None, need_weights=False):
         """ 
-            key_padding_mask: len x batch
+            key_padding_mask: seqlen x batch
             attn_mask:  tgt_len x src_len
             mask 1 为忽略项
         """
@@ -202,7 +202,7 @@ class SelfAttentionMask(nn.Module):
     def forward(self, size):
         if self.weights is None or size > self.weights.size(0):
             self.weights = SelfAttentionMask.get_mask(size)
-        res = self.weights[:size,:size].cuda(self.device).detach()
+        res = self.weights[:size,:size].to(self.device).detach()
         return res
 
 class LearnedPositionalEmbedding(nn.Module):
@@ -222,7 +222,7 @@ class LearnedPositionalEmbedding(nn.Module):
     def forward(self, inputs, offset=0):
         """Input is expected to be of size [seq_len x bsz]."""
         seq_len, bsz = inputs.size()
-        positions = (offset + torch.arange(seq_len)).cuda(self.device)
+        positions = (offset + torch.arange(seq_len)).to(self.device)
         res = self.weights(positions).unsqueeze(1).expand(-1, bsz, -1)
         return res
 
@@ -266,5 +266,13 @@ class SinusoidalPositionalEmbedding(nn.Module):
                 self.embedding_dim,
             )
         positions = offset + torch.arange(seq_len)  # seq_len * emb_dim
-        res = self.weights.index_select(0, positions).unsqueeze(1).expand(-1, bsz, -1).cuda(self.device).detach()
+        res = self.weights.index_select(0, positions).unsqueeze(1).expand(-1, bsz, -1).to(self.device).detach()
         return res
+
+def gelu(x):
+    """
+        GeLU(x) = x * \\phi(x)  
+        phi(x)是正态概率分布函数, 即error function
+    """
+    cdf = 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
+    return cdf*x

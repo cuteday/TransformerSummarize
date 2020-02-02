@@ -23,7 +23,7 @@ class Example:
         self.art_extend_vocab, self.art_oovs = article2ids(src_words, vocab)
         abs_extend_vocab = abstract2ids(abstract_words, vocab, self.art_oovs)
 
-        if config['pointer_gen']:      
+        if config['copy']:      
             # 改写目标输出 反映COPY OOV
             _, self.dec_tgt = self.get_dec_inp_tgt(abs_extend_vocab, config['max_tgt_ntokens'])
 
