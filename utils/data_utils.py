@@ -73,61 +73,53 @@ def pad_sequence(data, padding_idx=0, length = 0):
     """
     if length==0: length = max(len(entry) for entry in data)
     return [d + [padding_idx] * (length - len(d)) for d in data]
-    
-##### 以下函数中的Variable全部可以删去 #####
 
 def get_input_from_batch(batch, config, device, batch_first = False):
     """
         returns: enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage
         如果config没有启用pointer 和cov 则相应的项返回None
     """
-    batch_size = batch.enc_inp.size(0)
 
-    enc_batch = batch.enc_inp
-    enc_pad_mask = batch.enc_pad_mask
-    c_t_1 = torch.zeros(batch_size, 2 * config['hidden_size'])   # accumulated coverage vector
+    enc_batch = batch.enc_inp.to(device)
+    enc_pad_mask = batch.enc_pad_mask.to(device)
+    batch_size = enc_batch.size(0)
+    dec_len = batch.dec_inp.size(1)
+       
     enc_lens = batch.enc_lens
     extra_zeros = None
     enc_batch_extend_vocab = None
     coverage = None
+    c_t_1 = None
 
     if config['copy']:
-        enc_batch_extend_vocab = Variable(batch.art_batch_extend_vocab.long())
+        enc_batch_extend_vocab = batch.art_batch_extend_vocab.long().to(device)
         # max_art_oovs is the max over all the article oov list in the batch
         if batch.max_art_oovs > 0:
-            extra_zeros = Variable(torch.zeros(batch_size, batch.max_art_oovs))
+            extra_zeros = torch.zeros((batch_size, dec_len, batch.max_art_oovs), device = device)
     
     if config['coverage']:
-        coverage = Variable(torch.zeros(enc_batch.size()))
-
-    # move tensors to device
-    enc_batch = enc_batch.to(device)
-    enc_pad_mask = enc_pad_mask.to(device)
-    c_t_1 = c_t_1.to(device)
-    if enc_batch_extend_vocab is not None:
-        enc_batch_extend_vocab = enc_batch_extend_vocab.to(device)
-    if extra_zeros is not None:
-        extra_zeros = extra_zeros.to(device)
-    if coverage is not None:
-        coverage = coverage.to(device)
-
+        coverage = torch.zeros(enc_batch.size(), device=device)
+        c_t_1 = torch.zeros(batch_size, 2 * config['hidden_size'], device = device)  # accumulated coverage vector
+        
     if not batch_first:
         enc_batch.transpose_(0, 1)
         enc_pad_mask.transpose_(0, 1)
+        if config['copy']:
+            extra_zeros.transpose_(0, 1)
 
     return enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage
 
 def get_output_from_batch(batch, device, batch_first = False):
     """ returns: dec_batch, dec_pad_mask, max_dec_len, dec_lens_var, tgt_batch """
-    dec_batch = Variable(batch.dec_inp.long())
-    dec_pad_mask = Variable(batch.dec_pad_mask).float()
+    dec_batch = batch.dec_inp
+    dec_pad_mask = batch.dec_pad_mask
     dec_lens = batch.dec_lens
-    dec_lens_var = Variable(torch.tensor(dec_lens)).float()
+    dec_lens_var = torch.tensor(dec_lens).float()
 
     # 这个东东是用来规范化batch loss用的
     # 每一句的总loss除以它的词数
     max_dec_len = max(dec_lens)
-    tgt_batch = Variable(batch.dec_tgt).long() 
+    tgt_batch = batch.dec_tgt.long()
 
     dec_batch = dec_batch.to(device)
     dec_pad_mask = dec_pad_mask.to(device)

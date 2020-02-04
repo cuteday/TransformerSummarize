@@ -84,8 +84,8 @@ class BeamSearch(object):
         ref = open(self._rouge_ref, 'w')
         dec = open(self._rouge_dec, 'w')
         
-        for batch in test_loader:
-            # Run beam search to get best Hypothesis
+        for batch in tqdm(test_loader):
+            # Run beam search to get best hypothesis
             best_summary = self.beam_search(batch)
 
             original_abstract = batch.original_abstract[0]
@@ -106,13 +106,13 @@ class BeamSearch(object):
 
     def beam_search(self, batch):
         config = self.config
-        #batch should have only one example
+        # batch should have only one example
         enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_0, coverage_t_0 = \
             get_input_from_batch(batch, config, config['device'])
 
         encoder_outputs, padding_mask = self.model.encode(enc_batch, enc_padding_mask)
 
-        #decoder batch preparation, it has beam_size example initially everything is repeated
+        # decoder batch preparation, it has beam_size example initially everything is repeated
         beams = [Beam(tokens=[self.vocab.word2id('<start>')],
                       log_probs=[0.0],
                       coverage=(coverage_t_0[0] if config['copy'] else None))
@@ -124,7 +124,7 @@ class BeamSearch(object):
             pred = self.model.decode(hyp_tokens, encoder_outputs, padding_mask)
 
             log_probs = torch.log(pred[-1,:,:])         # get probs for next token
-            topk_log_probs, topk_ids = torch.topk(log_probs, config['beam_size'] * 2)  # 为什么是2? 防止全部是<end>的极端情况
+            topk_log_probs, topk_ids = torch.topk(log_probs, config['beam_size'] * 2)  # avoid all <end> tokens in top-k
 
             all_beams = []
             num_orig_beams = 1 if steps == 0 else len(beams)

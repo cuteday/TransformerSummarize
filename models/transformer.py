@@ -156,7 +156,7 @@ class MultiheadAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             #attn_weights, _ = attn_weights.max(dim=1)  # max pooling
             #attn_weights = attn_weights[:, 0, :, :]    # 只拿第k个head > <
-            #attn_weights = attn_weights.mean(dim=1)    # mean pooling
+            attn_weights = attn_weights.mean(dim=1)    # mean pooling
             attn_weights = attn_weights.transpose(0, 1)
         else:
             attn_weights = None

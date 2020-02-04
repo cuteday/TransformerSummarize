@@ -18,7 +18,7 @@ class WordProbLayer(nn.Module):
         self.dropout = dropout
     
         if self.copy:
-            # transformer的拷贝机制 是在顶端添加额外的单头注意力层
+            # add an extra single headed att-layer to implement copy-mechanism ヽ(･ω･´ﾒ)
             self.external_attn = MultiheadAttention(self.hidden_size, 1, self.dropout, weights_dropout=False)
             self.proj = nn.Linear(self.hidden_size * 3, self.dict_size)
             self.prob_copy = nn.Linear(self.hidden_size * 3, 1, bias=True)
@@ -31,28 +31,31 @@ class WordProbLayer(nn.Module):
         init_linear_weight(self.proj)
         if self.copy: init_linear_weight(self.prob_copy)
 
-    def forward(self, h, y_emb=None, memory=None, mask_x=None, xids=None, max_ext_len=None):
+    def forward(self, h, emb=None, memory=None, src_mask=None, tokens=None, extra_zeros=None):
         """
             h: final hidden layer output by decoder [ seqlen * bsz * hidden ]
             memory: output by encoder               
-            y_emb: 
-            mask_x: padding mask
-            xids: indices of words from source text [words2ids(src)]
+            emb: word embedd for current token...
+            src_mask: padding mask
+            tokens: indices of words from source text [include extended vocabs]
             max_ext_len: max len of extended vocab
-            return: softmax probabilities
+            returns: softmaxed probabilities, copy attention distribs
         """
         if self.copy:
             # dists: seqlen * bsz * seqlen
-            atts, dists = self.external_attn(query=h, key=memory, value=memory, key_padding_mask=mask_x, need_weights = True)
-            pred = torch.softmax(self.proj(torch.cat([h, y_emb, atts], -1)), dim=-1)        #原词典上的概率分布
-            if max_ext_len > 0:
-                ext_zeros = Variable(torch.zeros(pred.size(0), pred.size(1), max_ext_len)).to(self.device)
-                pred = torch.cat((pred, ext_zeros), -1)
-            g = torch.sigmoid(self.prob_copy(torch.cat([h, y_emb, atts], -1)))              #计算生成概率g
-            # xids应与dists的大小保持一致
-            xids = xids.transpose(0, 1).unsqueeze(0).repeat(pred.size(0), 1, 1)
+            # pred: seqlen * bsz * vocab_size
+            atts, dists = self.external_attn(query=h, key=memory, value=memory, key_padding_mask=src_mask, need_weights = True)
+            pred = torch.softmax(self.proj(torch.cat([h, emb, atts], -1)), dim=-1)        #原词典上的概率分布
+            if extra_zeros is not None:
+                pred = torch.cat((pred, extra_zeros), -1)
+            g = torch.sigmoid(self.prob_copy(torch.cat([h, emb, atts], -1)))              #计算生成概率g
+            # tokens应与dists的大小保持一致, 并仅在最后一维大小与pred不同
+            tokens = tokens.unsqueeze(0).repeat(pred.size(0), 1, 1)
             # 在最后一维(即预测概率分布)上scatter
-            pred = (g * pred).scatter_add(2, xids, (1 - g) * dists)
+            print(pred.size())
+            print(tokens.size())
+            print(dists.size())
+            pred = (g * pred).scatter_add(2, tokens, (1 - g) * dists)
         else:
             pred = torch.softmax(self.proj(h), dim=-1)
             dists = None
@@ -98,7 +101,7 @@ class LabelSmoothing(nn.Module):
 
 class LayerNorm(nn.Module):
     """
-        LayerNorm的原型函数... !资料仅供学习使用!
+        LayerNorm的原型函数... 
         说的那么麻烦...其实就是沿最后一维作标准化
         为了不让取值集中在0附近(失去激活函数的非线性性质), 它还非常贴心地添加了平移和缩放功能...!
     """

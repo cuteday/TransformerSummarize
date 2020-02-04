@@ -21,6 +21,7 @@ class Model(nn.Module):
         self.dropout = config['dropout']
         self.smoothing = config['label_smoothing']
         self.is_predicting = config['is_predicting']
+        self.copy = config['copy']
 
         self.attn_mask = SelfAttentionMask(device=self.device)
         self.word_embed = nn.Embedding(self.vocab_size, self.emb_dim, self.padding_idx)
@@ -28,7 +29,7 @@ class Model(nn.Module):
         self.enc_layers = nn.ModuleList()
         self.dec_layers = nn.ModuleList()
         self.emb_layer_norm = nn.LayerNorm(self.emb_dim)    # copy & coverage not implemented...
-        self.word_prob = WordProbLayer(self.hidden_size, self.vocab_size, self.device, self.dropout)
+        self.word_prob = WordProbLayer(self.hidden_size, self.vocab_size, self.device, self.dropout, copy=self.copy)
         self.label_smoothing = LabelSmoothing(self.device, self.vocab_size, self.padding_idx, self.smoothing)
 
         for _ in range(self.num_layers):
@@ -76,26 +77,31 @@ class Model(nn.Module):
         
         return x, padding_mask
 
-    def decode(self, inputs, src, src_padding_mask, padding_mask = None):
+    def decode(self, inputs, src, src_padding_mask, padding_mask=None,
+                src_extend_vocab = None, extra_zeros = None):      # if copy enabled
         """ copy not implemented """
         seqlen, _ = inputs.size()
         if not self.is_predicting and padding_mask is None:
             padding_mask = inputs.eq(self.padding_idx)
         x = self.word_embed(inputs) + self.pos_embed(inputs)
         x = F.dropout(self.emb_layer_norm(x), self.dropout, self.training)
-        
+        emb = x
+
         self_attn_mask = self.attn_mask(seqlen)
 
         for layer in self.dec_layers:
             x,_,_ = layer(x, self_padding_mask=padding_mask, self_attn_mask=self_attn_mask,
                     external_memories=src, external_padding_mask=src_padding_mask)
-        
-        pred, _ = self.word_prob(x)
+        if self.copy:
+            pred, _ = self.word_prob(x, emb, memory=src, src_mask=src_padding_mask,
+                        tokens = src_extend_vocab, extra_zeros= extra_zeros)
+        else: pred, _ = self.word_prob(x)
         return pred
 
-    def forward(self, src, tgt, src_padding_mask = None, tgt_padding_mask = None):
+    def forward(self, src, tgt, src_padding_mask=None, tgt_padding_mask=None,
+            src_extend_vocab = None, extra_zeros = None):       # if copy enabled
         """
             src&tgt: seqlen, bsz
-        """
+        """ 
         src_enc, src_padding_mask = self.encode(src, src_padding_mask)
-        return self.decode(tgt, src_enc, src_padding_mask, tgt_padding_mask)
+        return self.decode(tgt, src_enc, src_padding_mask, tgt_padding_mask, src_extend_vocab, extra_zeros)

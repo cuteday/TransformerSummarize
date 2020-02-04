@@ -39,12 +39,11 @@ class Example:
             target = target[:max_len] # no end_token
         else: # no truncation
             target.append(stop_id) # end token
-        assert len(inp) == len(target)  # 皮卡皮卡
+        assert len(inp) == len(target)  
         return inp, target
 
 class Batch:
     def __init__(self, batch):
-        # CNNDM中有114514个空样例
         # 过滤掉他们（我有特别的filter技巧~）
         batch = list(filter(lambda poi: len(poi.enc_inp)>0, batch))
 
@@ -63,7 +62,7 @@ class Batch:
         self.dec_tgt = torch.tensor(pad_sequence(dec_tgt, PAD))
         self.enc_inp = torch.tensor(pad_sequence(enc_inp, PAD))
         self.art_batch_extend_vocab = torch.tensor(pad_sequence(art_extend_vocab, PAD))
-        self.max_art_oovs = self.art_batch_extend_vocab.size(1)
+        self.max_art_oovs = max([len(oovs)for oovs in self.art_oovs])
 
         self.enc_pad_mask = self.enc_inp.eq(PAD)
         self.dec_pad_mask = self.dec_inp.eq(PAD)
