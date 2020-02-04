@@ -65,8 +65,9 @@ class Model(nn.Module):
         gold_prob = (gold_prob*mask).clamp(min=1e-8).log().sum(dim=-1) / mask.sum(dim=-1)   # batch内规范化
         return gold_prob.mean()
 
-    def encode(self, inputs):
-        padding_mask = inputs.eq(self.padding_idx)
+    def encode(self, inputs, padding_mask = None):
+        if padding_mask is None: 
+            padding_mask = inputs.eq(self.padding_idx)
         x = self.word_embed(inputs) + self.pos_embed(inputs)
         x = F.dropout(self.emb_layer_norm(x), self.dropout, self.training)  #embed dropout
 
@@ -75,12 +76,11 @@ class Model(nn.Module):
         
         return x, padding_mask
 
-    def decode(self, inputs, src, src_padding_mask):
+    def decode(self, inputs, src, src_padding_mask, padding_mask = None):
         """ copy not implemented """
         seqlen, _ = inputs.size()
-        if not self.is_predicting:
+        if not self.is_predicting and padding_mask is None:
             padding_mask = inputs.eq(self.padding_idx)
-        else: padding_mask = None
         x = self.word_embed(inputs) + self.pos_embed(inputs)
         x = F.dropout(self.emb_layer_norm(x), self.dropout, self.training)
         
@@ -93,9 +93,9 @@ class Model(nn.Module):
         pred, _ = self.word_prob(x)
         return pred
 
-    def forward(self, src, tgt):
+    def forward(self, src, tgt, src_padding_mask = None, tgt_padding_mask = None):
         """
             src&tgt: seqlen, bsz
         """
-        src_enc, src_padding_mask = self.encode(src)
-        return self.decode(tgt, src_enc, src_padding_mask)
+        src_enc, src_padding_mask = self.encode(src, src_padding_mask)
+        return self.decode(tgt, src_enc, src_padding_mask, tgt_padding_mask)

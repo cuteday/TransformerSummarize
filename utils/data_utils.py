@@ -83,9 +83,9 @@ def get_input_from_batch(batch, config, device, batch_first = False):
     """
     batch_size = batch.enc_inp.size(0)
 
-    enc_batch = Variable(batch.enc_inp.long())
-    enc_pad_mask = Variable(batch.enc_pad_mask).float()
-    c_t_1 = Variable(torch.zeros(batch_size, 2 * config['hidden_size']))    # accumulated coverage vector
+    enc_batch = batch.enc_inp
+    enc_pad_mask = batch.enc_pad_mask
+    c_t_1 = torch.zeros(batch_size, 2 * config['hidden_size'])   # accumulated coverage vector
     enc_lens = batch.enc_lens
     extra_zeros = None
     enc_batch_extend_vocab = None
@@ -137,5 +137,6 @@ def get_output_from_batch(batch, device, batch_first = False):
     if not batch_first:
         dec_batch.transpose_(0, 1)
         tgt_batch.transpose_(0, 1)
+        dec_pad_mask.transpose_(0, 1)
 
     return dec_batch, dec_pad_mask, max_dec_len, dec_lens_var, tgt_batch

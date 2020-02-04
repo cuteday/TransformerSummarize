@@ -65,8 +65,8 @@ class Batch:
         self.art_batch_extend_vocab = torch.tensor(pad_sequence(art_extend_vocab, PAD))
         self.max_art_oovs = self.art_batch_extend_vocab.size(1)
 
-        self.enc_pad_mask = self.enc_inp.ne(PAD)
-        self.dec_pad_mask = self.dec_inp.ne(PAD)
+        self.enc_pad_mask = self.enc_inp.eq(PAD)
+        self.dec_pad_mask = self.dec_inp.eq(PAD)
 
         self.original_abstract = [poi.original_abstract for poi in batch]
         self.original_article = [poi.original_article for poi in batch]

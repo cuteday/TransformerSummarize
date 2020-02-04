@@ -5,6 +5,7 @@ def init_config(args):
     config = {
         'train_from': '',
         'test_from': '',
+        'log_root': '../',
         'data_path': variables.CNNDMPath,
         'vocab_file': variables.CNNDMPath + '/vocab_cnt.pkl',
         'model_path': '../saved_models',
