@@ -32,13 +32,16 @@ def init_config(args):
         'dropout': 0.2,
         'max_grad_norm': 2.0,
 
+        'betas': [0.9, 0.99],
+
         'learning_rate': 0.02,
         'batch_size': 6,
+        'gradient_accum': 1,
         'beam_size': 5,
-        'validate_every': 5000,
+        'validate_every': 10000,
         'report_every': 10,
-        'save_every': 5000,
-        'train_epoch': 1,
+        'save_every': 10000,
+        'train_epoch': 2,
 
     }
     for key in args.keys():

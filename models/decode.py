@@ -3,7 +3,6 @@ import os
 import time
 
 import torch
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from rouge import FilesRouge
 
@@ -40,7 +39,7 @@ class BeamSearch(object):
     def __init__(self, model, config, step):
         self.config = config
         self.model = model.to(config['device'])
-
+        
         self._decode_dir = os.path.join(config['log_root'], 'decode_S%s' % str(step))
         self._rouge_ref = os.path.join(self._decode_dir, 'rouge_ref')
         self._rouge_dec = os.path.join(self._decode_dir, 'rouge_dec')
@@ -78,6 +77,7 @@ class BeamSearch(object):
     def decode(self):
         config = self.config
         start = time.time()
+        self.model.eval()       # ...! qwq
         counter = 0
         test_loader = DataLoader(self.test_data, batch_size=1, shuffle = False, collate_fn=Collate(beam_size = config["beam_size"]))
         
@@ -105,6 +105,11 @@ class BeamSearch(object):
         self.report_rouge(self._rouge_ref, self._rouge_dec)
 
     def beam_search(self, batch):
+        """
+            TODOS:
+            add tri-gram blocking
+            add alpha/beta length controlling
+        """
         config = self.config
         # batch should have only one example
         enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_0, coverage_t_0 = \
@@ -121,7 +126,7 @@ class BeamSearch(object):
         steps = 0
         while steps < config['max_dec_steps'] and len(results) < config['beam_size']:
             hyp_tokens = torch.tensor([h.tokens for h in beams],device=config['device']).transpose(0,1) # NOT batch first
-            pred = self.model.decode(hyp_tokens, encoder_outputs, padding_mask)
+            pred = self.model.decode(hyp_tokens, encoder_outputs, padding_mask, None, )
 
             log_probs = torch.log(pred[-1,:,:])         # get probs for next token
             topk_log_probs, topk_ids = torch.topk(log_probs, config['beam_size'] * 2)  # avoid all <end> tokens in top-k

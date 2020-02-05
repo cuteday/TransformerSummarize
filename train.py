@@ -2,7 +2,7 @@ import os
 
 import torch
 from torch.nn.utils import clip_grad_norm_
-from torch.optim import Adagrad
+from torch.optim import Adagrad, Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -26,8 +26,9 @@ class Trainer:
     def setup(self, config):
         
         self.model = Model(config).to(config['device'])
-        # transformer use ada, test for now...
-        self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
+        # 
+        #self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
+        self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
         checkpoint = None
         if config['train_from'] != '':
             logging('Train from %s'%config['train_from'])
@@ -37,7 +38,7 @@ class Trainer:
             self.optimizer.load_state_dict(checkpoint['optimizer'])
 
     def train_one(self, batch):
-        """ copy and coverage not implemented """
+        """ coverage not implemented """
         config = self.config
         enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage = \
             get_input_from_batch(batch, config, self.device)
@@ -69,7 +70,7 @@ class Trainer:
                 if self.step % config['report_every'] == 0:
                     logging("Step %d Train loss %.3f"%(self.step, running_avg_loss))    
                 if self.step % config['save_every'] == 0:
-                    self.save(self.step)
+                    self.save()
                 if self.step % config['validate_every'] == 0:
                     self.validate()
 
@@ -86,13 +87,12 @@ class Trainer:
         ave_loss = sum(losses) / len(losses)
         logging('Validate loss : %f'%ave_loss)
 
-    def save(self, step):
+    def save(self):
         state = {
             'model': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
-            'step': step
+            'step': self.step
         }
-        save_path = os.path.join(self.config['model_path'], 'model_s%d.pt'%step)
-        logging('Saving model step %d to %s...'%(step, save_path))
+        save_path = os.path.join(self.config['model_path'], 'model_s%d.pt'%self.step)
+        logging('Saving model step %d to %s...'%(self.step, save_path))
         torch.save(state, save_path)
-

@@ -8,10 +8,12 @@ from models.decode import BeamSearch
 
 def train(config):
     trainer = Trainer(config)
-    trainer.train() 
+    trainer.train()
+    trainer.save()
 
 def test(config):
     if config['test_from'] is not '':
+        config['is_predicting'] = True
         model = Model(config)
         saved_model = torch.load(config['test_from'], map_location='cpu')
         model.load_state_dict(saved_model['model'])
