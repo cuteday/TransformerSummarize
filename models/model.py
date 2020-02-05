@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from models.transformer import TransformerLayer, SinusoidalPositionalEmbedding, SelfAttentionMask
 from models.modules import WordProbLayer, LabelSmoothing
+from utils.initialize import init_uniform_weight
 
 class Model(nn.Module):
 
@@ -36,9 +37,11 @@ class Model(nn.Module):
             self.enc_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,self.dropout))
             self.dec_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,self.dropout, with_external=True))
 
+        self.reset_parameters()
+
     def reset_parameters(self):
-        #init_uniform_weight(self.word_embed.weight)
-        pass
+        init_uniform_weight(self.word_embed.weight)
+        #pass
 
     def label_smoothing_loss(self, pred, gold, mask = None):
         """

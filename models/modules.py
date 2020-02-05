@@ -52,9 +52,6 @@ class WordProbLayer(nn.Module):
             # tokens应与dists的大小保持一致, 并仅在最后一维大小与pred不同
             tokens = tokens.unsqueeze(0).repeat(pred.size(0), 1, 1)
             # 在最后一维(即预测概率分布)上scatter
-            print(pred.size())
-            print(tokens.size())
-            print(dists.size())
             pred = (g * pred).scatter_add(2, tokens, (1 - g) * dists)
         else:
             pred = torch.softmax(self.proj(h), dim=-1)

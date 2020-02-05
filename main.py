@@ -8,7 +8,7 @@ from models.decode import BeamSearch
 
 def train(config):
     trainer = Trainer(config)
-    trainer.train()
+    trainer.train() 
 
 def test(config):
     if config['test_from'] is not '':
@@ -27,5 +27,6 @@ if __name__ == '__main__':
     init_seeds()
     args = parser.parse_args()
     config_ = init_config(vars(args))
-    train(config_)
-    #test(config_)
+    print(config)
+    #train(config_)
+    test(config_)
