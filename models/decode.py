@@ -109,6 +109,7 @@ class BeamSearch(object):
             TODOS:
             add tri-gram blocking
             add alpha/beta length controlling
+            add coverage mechanism xD
         """
         config = self.config
         # batch should have only one example
@@ -120,13 +121,15 @@ class BeamSearch(object):
         # decoder batch preparation, it has beam_size example initially everything is repeated
         beams = [Beam(tokens=[self.vocab.word2id('<start>')],
                       log_probs=[0.0],
-                      coverage=(coverage_t_0[0] if config['copy'] else None))
-                 for _ in range(config['beam_size'])]
+                      coverage=(coverage_t_0[0] if config['coverage'] else None)) 
+                      for _ in range(config['beam_size'])]
         results = []
         steps = 0
         while steps < config['max_dec_steps'] and len(results) < config['beam_size']:
             hyp_tokens = torch.tensor([h.tokens for h in beams],device=config['device']).transpose(0,1) # NOT batch first
-            pred = self.model.decode(hyp_tokens, encoder_outputs, padding_mask, None, )
+            hyp_tokens.masked_fill_(hyp_tokens>=self.vocab.size, self.vocab.word2id('<unk>'))# convert oov to unk
+            pred = self.model.decode(hyp_tokens, encoder_outputs, padding_mask, None,
+                                     enc_batch_extend_vocab, extra_zeros)
 
             log_probs = torch.log(pred[-1,:,:])         # get probs for next token
             topk_log_probs, topk_ids = torch.topk(log_probs, config['beam_size'] * 2)  # avoid all <end> tokens in top-k

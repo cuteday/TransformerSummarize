@@ -44,7 +44,7 @@ class Trainer:
             get_input_from_batch(batch, config, self.device)
         dec_batch, dec_padding_mask, max_dec_len, dec_lens_var, target_batch = \
             get_output_from_batch(batch, self.device)
-        pred = self.model(enc_batch, dec_batch, enc_padding_mask, dec_padding_mask, enc_batch_extend_vocab,extra_zeros)
+        pred = self.model(enc_batch, dec_batch, enc_padding_mask, dec_padding_mask, enc_batch_extend_vocab, extra_zeros)
         loss = self.model.label_smoothing_loss(pred, target_batch)
         return loss
 

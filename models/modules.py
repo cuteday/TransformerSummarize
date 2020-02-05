@@ -45,7 +45,7 @@ class WordProbLayer(nn.Module):
             atts, dists = self.external_attn(query=h, key=memory, value=memory, key_padding_mask=src_mask, need_weights = True)
             pred = torch.softmax(self.proj(torch.cat([h, emb, atts], -1)), dim=-1)        #原词典上的概率分布
             if extra_zeros is not None:
-                pred = torch.cat((pred, extra_zeros), -1)
+                pred = torch.cat((pred, extra_zeros.repeat(pred.size(0),1,1)), -1)
             g = torch.sigmoid(self.prob_copy(torch.cat([h, emb, atts], -1)))              #计算生成概率g
             # tokens应与dists的大小保持一致, 并仅在最后一维大小与pred不同
             tokens = tokens.unsqueeze(0).repeat(pred.size(0), 1, 1)

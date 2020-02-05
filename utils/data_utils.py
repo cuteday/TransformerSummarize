@@ -16,7 +16,7 @@ def make_vocab(wc, vocab_size):
     return word2id, id2word
 
 def make_embedding(emb_path, vocab, emb_size):
-    emb_matrix = torch.randn((vocab.size(), emb_size), dtype=torch.float)
+    emb_matrix = torch.randn((vocab.size, emb_size), dtype=torch.float)
     with open(emb_path, 'r') as emb:
         for entry in emb:
             entry = entry.split()
@@ -35,7 +35,7 @@ def article2ids(words, vocab):
         if i == UNK:
             if w not in oovs:
                 oovs.append(w)
-            ids.append(vocab.size() + oovs.index(w))
+            ids.append(vocab.size + oovs.index(w))
         else: ids.append(i)
 
     return ids, oovs
@@ -46,7 +46,7 @@ def abstract2ids(words, vocab, article_oovs):
         i = vocab.word2id(w)
         if i == UNK:
             if w in article_oovs:
-                ids.append(vocab.size() + article_oovs.index(w))
+                ids.append(vocab.size + article_oovs.index(w))
             else: ids.append(UNK)
         else: ids.append(i)
     return ids
@@ -54,7 +54,7 @@ def abstract2ids(words, vocab, article_oovs):
 def output2words(ids, vocab, art_oovs):
     words = []
     for i in ids:
-        w = vocab.id2word(i) if i < vocab.size() else art_oovs[i - vocab.size()]
+        w = vocab.id2word(i) if i < vocab.size else art_oovs[i - vocab.size]
         words.append(w)
     return words
 
@@ -82,7 +82,6 @@ def get_input_from_batch(batch, config, device, batch_first = False):
     enc_batch = batch.enc_inp.to(device)
     enc_pad_mask = batch.enc_pad_mask.to(device)
     batch_size = enc_batch.size(0)
-    dec_len = batch.dec_inp.size(1)
        
     enc_lens = batch.enc_lens
     extra_zeros = None
@@ -94,7 +93,7 @@ def get_input_from_batch(batch, config, device, batch_first = False):
         enc_batch_extend_vocab = batch.art_batch_extend_vocab.long().to(device)
         # max_art_oovs is the max over all the article oov list in the batch
         if batch.max_art_oovs > 0:
-            extra_zeros = torch.zeros((batch_size, dec_len, batch.max_art_oovs), device = device)
+            extra_zeros = torch.zeros((batch_size, 1, batch.max_art_oovs), device = device)
     
     if config['coverage']:
         coverage = torch.zeros(enc_batch.size(), device=device)
@@ -103,7 +102,7 @@ def get_input_from_batch(batch, config, device, batch_first = False):
     if not batch_first:
         enc_batch.transpose_(0, 1)
         enc_pad_mask.transpose_(0, 1)
-        if config['copy']:
+        if config['copy'] and extra_zeros is not None:
             extra_zeros.transpose_(0, 1)
 
     return enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage

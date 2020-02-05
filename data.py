@@ -107,8 +107,9 @@ class Vocab:
         return self._word2id['<unk>'] if word not in self._word2id else self._word2id[word]
 
     def id2word(self, idx):
-        return self._id2word[idx]
+        return '<unk>' if idx >= self.size else self._id2word[idx]
 
+    @property
     def size(self):
         return len(self._word2id)
 

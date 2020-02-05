@@ -20,7 +20,7 @@ def init_config(args):
 
         'is_predicting': False,
         'device': torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-        'copy': True,
+        'copy': False,
         'coverage': False,
 
         'hidden_size': 512,
@@ -30,11 +30,11 @@ def init_config(args):
         'num_heads': 8,
         'label_smoothing': 0.1,
         'dropout': 0.2,
-        'max_grad_norm': 2.0,
+        'max_grad_norm': 5.0,
 
         'betas': [0.9, 0.99],
 
-        'learning_rate': 0.02,
+        'learning_rate': 0.005,
         'batch_size': 6,
         'gradient_accum': 1,
         'beam_size': 5,

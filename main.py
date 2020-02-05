@@ -12,15 +12,17 @@ def train(config):
     trainer.save()
 
 def test(config):
-    if config['test_from'] is not '':
+    try:
         config['is_predicting'] = True
         model = Model(config)
         saved_model = torch.load(config['test_from'], map_location='cpu')
         model.load_state_dict(saved_model['model'])
         step = saved_model['step']
 
-    predictor = BeamSearch(model, config, step)
-    predictor.decode()
+        predictor = BeamSearch(model, config, step)
+        predictor.decode()
+    except: 
+        print('No model specified')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='urara')
@@ -29,6 +31,5 @@ if __name__ == '__main__':
     init_seeds()
     args = parser.parse_args()
     config_ = init_config(vars(args))
-    print(config)
-    #train(config_)
-    test(config_)
+    train(config_)
+    #test(config_)
