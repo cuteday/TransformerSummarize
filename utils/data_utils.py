@@ -1,4 +1,3 @@
-from torch.autograd import Variable
 import torch
 
 PAD = 0
