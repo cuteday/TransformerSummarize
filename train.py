@@ -64,12 +64,15 @@ class Trainer:
         for _ in range(config['train_epoch']):
             for batch in train_loader:
                 self.step += 1
-                self.optimizer.zero_grad()
+                
                 loss = self.train_one(batch)
-                loss.backward()
-                clip_grad_norm_(self.model.parameters(), config['max_grad_norm'])
-                self.optimizer.step()
                 running_avg_loss = calc_running_avg_loss(loss.item(), running_avg_loss)
+                loss.div(float(config['gradient_accum'])).backward()
+
+                if self.step % config['gradient_accum'] == 0:   # gradient accumulation
+                    clip_grad_norm_(self.model.parameters(), config['max_grad_norm'])
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
 
                 if self.step % config['report_every'] == 0:
                     logging("Step %d Train loss %.3f"%(self.step, running_avg_loss))    

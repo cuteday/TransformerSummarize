@@ -40,7 +40,7 @@ class Model(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        #init_uniform_weight(self.word_embed.weight)
+        init_uniform_weight(self.word_embed.weight)
         pass
 
     def label_smoothing_loss(self, pred, gold, mask = None):

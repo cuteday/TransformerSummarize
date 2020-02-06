@@ -31,5 +31,5 @@ if __name__ == '__main__':
     init_seeds()
     args = parser.parse_args()
     config_ = init_config(vars(args))
-    #train(config_)
-    test(config_)
+    train(config_)
+    #test(config_)
