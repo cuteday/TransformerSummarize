@@ -27,8 +27,8 @@ class Trainer:
         
         self.model = Model(config).to(config['device'])
         # 
-        #self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
-        self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
+        self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
+        #self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
         checkpoint = None
         if config['train_from'] != '':
             logging('Train from %s'%config['train_from'])
@@ -45,10 +45,15 @@ class Trainer:
         dec_batch, dec_padding_mask, max_dec_len, dec_lens_var, target_batch = \
             get_output_from_batch(batch, self.device)
         pred = self.model(enc_batch, dec_batch, enc_padding_mask, dec_padding_mask, enc_batch_extend_vocab, extra_zeros)
+        
+        #print(pred.max(dim=-1)[1][:,0])
         loss = self.model.label_smoothing_loss(pred, target_batch)
         return loss
 
     def train(self):
+        """
+            implement gradient accum
+        """
 
         config = self.config
         train_loader = DataLoader(self.train_data, batch_size=config['batch_size'], shuffle=True, collate_fn=Collate())
@@ -64,7 +69,6 @@ class Trainer:
                 loss.backward()
                 clip_grad_norm_(self.model.parameters(), config['max_grad_norm'])
                 self.optimizer.step()
-                #print(loss.item())
                 running_avg_loss = calc_running_avg_loss(loss.item(), running_avg_loss)
 
                 if self.step % config['report_every'] == 0:

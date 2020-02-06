@@ -11,6 +11,9 @@ from utils.train_utils import logging
 from utils.data_utils import get_input_from_batch, output2words
 from tqdm import tqdm
 
+## beam search hyp-parameters
+alpha = 0.9
+
 class Beam(object):
     def __init__(self, tokens, log_probs, state=None, context=None, coverage=None):
         self.tokens = tokens
@@ -33,6 +36,10 @@ class Beam(object):
     def avg_log_prob(self):
         return sum(self.log_probs) / len(self.tokens)
 
+    @property
+    def decay_prob(self):
+        penalty = ((5.0+(len(self.tokens)+1))/6.0)**alpha
+        return sum(self.log_probs) / penalty
 
 class BeamSearch(object):
     """ 可可爱爱的标准Beam Search模板 """
@@ -50,7 +57,7 @@ class BeamSearch(object):
         self.test_data = CNNDMDataset('test', config['data_path'], config, self.vocab)
         
     def sort_beams(self, beams):
-        return sorted(beams, key=lambda h: h.avg_log_prob, reverse=True)
+        return sorted(beams, key=lambda h: h.decay_prob, reverse=True)
 
     @staticmethod
     def report_rouge(ref_path, dec_path):

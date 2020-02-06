@@ -36,7 +36,7 @@ class Example:
         if len(inp) > max_len:  # truncate
             # 如果需要截断，就不保留End Token
             inp = inp[:max_len]
-            target = target[:max_len] # no end_token
+            target = target[:max_len]
         else: # no truncation
             target.append(stop_id) # end token
         assert len(inp) == len(target)  
