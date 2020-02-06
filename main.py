@@ -28,7 +28,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='urara')
     parser.add_argument('-train_from', default='', type=str)
     parser.add_argument('-test_from', default='', type=str)
-    init_seeds()
+    #init_seeds()
     args = parser.parse_args()
     config_ = init_config(vars(args))
     train(config_)

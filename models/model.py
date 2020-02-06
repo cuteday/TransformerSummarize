@@ -56,18 +56,16 @@ class Model(nn.Module):
         return self.label_smoothing(pred.view(seq_len * bsz, -1),
                     gold.contiguous().view(seq_len * bsz, -1), mask.sum())
         
-    def nll_loss(self, pred:torch.Tensor, gold, mask = None):
+    def nll_loss(self, pred:torch.Tensor, gold, dec_lens):
         """
             nll: 指不自带softmax的loss计算函数
             pred: seqlen, bsz, vocab
             gold: seqlen, bsz
         """
-        if mask is None: mask = gold.ne(self.padding_idx)
         seqlen, bsz = gold.size()
-        mask = mask.view(seqlen, bsz)
-        gold_prob = pred.gather(dim=2, index=gold.view(seqlen, bsz, 1)).view(gold.size())   # cross entropy
-        gold_prob = (gold_prob*mask).clamp(min=1e-8).log().sum(dim=-1) / mask.sum(dim=-1)   # batch内规范化
-        return gold_prob.mean()
+        gold_prob = pred.gather(dim=2, index=gold.unsqueeze(2)).squeeze(2).clamp(min=1e-8)  # cross entropy
+        gold_prob = gold_prob.log().masked_fill(gold.eq(self.padding_idx), 0.).sum(dim=0) / dec_lens   # batch内规范化
+        return -gold_prob.mean()
 
     def encode(self, inputs, padding_mask = None):
         if padding_mask is None: 

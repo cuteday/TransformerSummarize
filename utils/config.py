@@ -8,7 +8,7 @@ def init_config(args):
         'log_root': '../',
         'data_path': variables.CNNDMPath,
         'vocab_file': variables.CNNDMPath + '/vocab_cnt.pkl',
-        'model_path': '../saved_models',
+        'model_path': '../saved_models_nll',
         'log_path': '../results',
 
         'max_src_ntokens': 400,
