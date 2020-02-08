@@ -8,7 +8,7 @@ def init_config(args):
         'log_root': '../',
         'data_path': variables.CNNDMPath,
         'vocab_file': variables.CNNDMPath + '/vocab_cnt.pkl',
-        'model_path': '../saved_models_nll',
+        'model_path': '../saved_models_lpe',
         'log_path': '../results',
 
         'max_src_ntokens': 400,
@@ -25,8 +25,8 @@ def init_config(args):
 
         'hidden_size': 512,
         'emb_dim': 512,
-        'd_ff': 2048,
-        'num_layers': 6,
+        'd_ff': 1024,
+        'num_layers': 4,
         'num_heads': 8,
         'label_smoothing': 0.1,
         'dropout': 0.2,
@@ -34,14 +34,14 @@ def init_config(args):
 
         'betas': [0.9, 0.99],
 
-        'learning_rate': 0.01,
-        'batch_size': 4,
+        'learning_rate': 0.06,
+        'batch_size': 8,
         'gradient_accum': 8,
         'beam_size': 5,
         'validate_every': 50000,
         'report_every': 100,
         'save_every': 50000,
-        'train_epoch': 5,
+        'train_epoch': 8,
 
     }
     for key in args.keys():

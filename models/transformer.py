@@ -14,13 +14,13 @@ class TransformerLayer(nn.Module):
         self.self_attn = MultiheadAttention(embed_dim, num_heads, dropout, weights_dropout)
         self.fc1 = nn.Linear(embed_dim, ff_embed_dim)
         self.fc2 = nn.Linear(ff_embed_dim, embed_dim)
-        self.attn_layer_norm = nn.LayerNorm(embed_dim)
-        self.ff_layer_norm = nn.LayerNorm(embed_dim)
+        self.attn_layer_norm = nn.LayerNorm(embed_dim, eps = 1e-12)
+        self.ff_layer_norm = nn.LayerNorm(embed_dim, eps = 1e-12)
         self.with_external = with_external
         self.dropout = dropout
         if self.with_external:
             self.external_attn = MultiheadAttention(embed_dim, num_heads, dropout, weights_dropout)
-            self.external_layer_norm = nn.LayerNorm(embed_dim)
+            self.external_layer_norm = nn.LayerNorm(embed_dim, eps = 1e-12)
         self.reset_parameters()
     
     def reset_parameters(self):
@@ -208,7 +208,7 @@ class LearnedPositionalEmbedding(nn.Module):
     """
         This module produces LearnedPositionalEmbedding.
     """
-    def __init__(self, embedding_dim, init_size=1024, device=0):
+    def __init__(self, embedding_dim, init_size=512, device=0):
         super(LearnedPositionalEmbedding, self).__init__()
         self.weights = nn.Embedding(init_size, embedding_dim)   # nn.embedding 默认finetune
         self.device = device
@@ -225,48 +225,29 @@ class LearnedPositionalEmbedding(nn.Module):
         res = self.weights(positions).unsqueeze(1).expand(-1, bsz, -1)
         return res
 
-class SinusoidalPositionalEmbedding(nn.Module):
+class SinusoidalPositionalEncoding(nn.Module):
     """
-        This module produces sinusoidal positional embeddings of any length.
+        Attention is All You Need ver.
+        Positional Encoding 的计算!
+        PE(pos, 2i) = sin(pos / (10000 ^ (2 * i / d_model)))
     """
-    def __init__(self, embedding_dim, init_size=1024, device=0):
-        super(SinusoidalPositionalEmbedding, self).__init__()
-        self.embedding_dim = embedding_dim
-        self.weights = SinusoidalPositionalEmbedding.get_embedding(
-            init_size,
-            embedding_dim
-        )
-        self.device= device
+    def __init__(self, d_model, max_size = 512, device=0):
+        super(SinusoidalPositionalEncoding, self).__init__()
 
-    @staticmethod
-    def get_embedding(num_embeddings, embedding_dim):
-        """
-            Build sinusoidal embeddings.
-            This matches the implementation in tensor2tensor, but differs slightly
-            from the description in Section 3.5 of "Attention Is All You Need".
-        """
-        half_dim = embedding_dim // 2
-        emb = math.log(10000) / (half_dim - 1)
-        emb = torch.exp(torch.arange(half_dim, dtype=torch.float) * -emb)   # arange = range()
-        emb = torch.arange(num_embeddings, dtype=torch.float).unsqueeze(1) * emb.unsqueeze(0)
-        emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1).view(num_embeddings, -1)
-        if embedding_dim % 2 == 1:
-            emb = torch.cat([emb, torch.zeros(num_embeddings, 1)], dim=1)
-        return emb
+        pe = torch.zeros(max_size, d_model)
+        position = torch.arange(0, max_size).unsqueeze(1)
+        div = torch.exp(torch.arange(0, d_model, 2, dtype=torch.float) *
+                        - (math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position.float() * div)
+        pe[:, 1::2] = torch.cos(position.float() * div)
+        pe.unsqueeze_(1)
+        self.register_buffer('pe', pe)
+        self.device = device
+        
+    def forward(self, x):
+        seq_len, bsz = x.size()
+        return self.pe[:seq_len,:,:].expand(-1, bsz, -1).to(self.device).detach()
 
-    def forward(self, inputs, offset=0):
-        """Input is expected to be of size [seq_len x bsz]."""
-        seq_len, bsz = inputs.size()
-        mx_position = seq_len + offset
-        if self.weights is None or mx_position > self.weights.size(0):
-            # recompute / expand embeddings if needed
-            self.weights = SinusoidalPositionalEmbedding.get_embedding(
-                mx_position,
-                self.embedding_dim,
-            )
-        positions = offset + torch.arange(seq_len)  # seq_len * emb_dim
-        res = self.weights.index_select(0, positions).unsqueeze(1).expand(-1, bsz, -1).to(self.device).detach()
-        return res
 
 def gelu(x):
     """
