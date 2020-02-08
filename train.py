@@ -26,7 +26,6 @@ class Trainer:
     def setup(self, config):
         
         self.model = Model(config).to(config['device'])
-        # 
         self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
         #self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
         checkpoint = None
@@ -35,6 +34,7 @@ class Trainer:
             checkpoint = torch.load(config['train_from'], map_location='cpu')
             self.model.load_state_dict(checkpoint['model'])
             self.step = checkpoint['step']
+            self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
             self.optimizer.load_state_dict(checkpoint['optimizer'])
 
     def train_one(self, batch):
@@ -47,14 +47,14 @@ class Trainer:
         pred = self.model(enc_batch, dec_batch, enc_padding_mask, dec_padding_mask, enc_batch_extend_vocab, extra_zeros)
         
         #print(pred.max(dim=-1)[1][:,0])    # 
-        loss = self.model.nll_loss(pred, target_batch, dec_lens_var)
-        #loss = self.model.label_smoothing_loss(pred, target_batch)
+        #loss = self.model.nll_loss(pred, target_batch, dec_lens_var)
+        loss = self.model.label_smoothing_loss(pred, target_batch)
         return loss
 
     def train(self):
 
         config = self.config
-        train_loader = DataLoader(self.train_data, batch_size=config['batch_size'], shuffle=True, collate_fn=Collate())
+        train_loader = DataLoader(self.train_data, batch_size=config['batch_size'], shuffle=False, collate_fn=Collate())
 
         running_avg_loss = 0
         self.model.train()
