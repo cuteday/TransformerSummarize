@@ -70,11 +70,10 @@ class LabelSmoothing(nn.Module):
         self.one_hot[0, self.padding_idx] = 0
         self.confidence = 1.0 - label_smoothing
 
-    def forward(self, output, target, normalize=1):
+    def forward(self, output, target):
         """
             支持扩展词典, 比如copy机制使用的src词典
             input size: bsz*seq_en, vocab
-            normalize: 一般是词的数量 即每个词的重要性相同
             return: 0维tensor
         """
         real_size = output.size(1)  
@@ -92,7 +91,7 @@ class LabelSmoothing(nn.Module):
         model_prob.scatter_(1, target, self.confidence)
         model_prob.masked_fill_((target == self.padding_idx), 0.)
 
-        return F.kl_div(output, model_prob, reduction='sum')/float(normalize)
+        return F.kl_div(output, model_prob, reduction='sum')
 
 class LayerNorm(nn.Module):
     """

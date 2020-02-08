@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.transformer import TransformerLayer, SinusoidalPositionalEmbedding, SelfAttentionMask
+from models.transformer import TransformerLayer, SinusoidalPositionalEmbedding, SelfAttentionMask, LearnedPositionalEmbedding
 from models.modules import WordProbLayer, LabelSmoothing
 from utils.initialize import init_uniform_weight
 
@@ -27,9 +27,10 @@ class Model(nn.Module):
         self.attn_mask = SelfAttentionMask(device=self.device)
         self.word_embed = nn.Embedding(self.vocab_size, self.emb_dim, self.padding_idx)
         self.pos_embed = SinusoidalPositionalEmbedding(self.emb_dim, device=self.device)
+        #self.pos_embed = LearnedPositionalEmbedding(self.emb_dim, device = self.device)
         self.enc_layers = nn.ModuleList()
         self.dec_layers = nn.ModuleList()
-        self.emb_layer_norm = nn.LayerNorm(self.emb_dim)    # copy & coverage not implemented...
+        self.emb_layer_norm = nn.LayerNorm(self.emb_dim, eps = 1e-12)    # coverage not implemented...
         self.word_prob = WordProbLayer(self.hidden_size, self.vocab_size, self.device, self.dropout, copy=self.copy)
         self.label_smoothing = LabelSmoothing(self.device, self.vocab_size, self.padding_idx, self.smoothing)
 
@@ -41,7 +42,6 @@ class Model(nn.Module):
 
     def reset_parameters(self):
         init_uniform_weight(self.word_embed.weight)
-        pass
 
     def label_smoothing_loss(self, pred, gold, mask = None):
         """
@@ -51,10 +51,10 @@ class Model(nn.Module):
         if mask is None: mask = gold.ne(self.padding_idx)
         seq_len, bsz = gold.size()
         # KL散度需要预测概率过log...
-        pred = torch.log(pred.clamp(min=1e-8))  # 方便实用的截断函数 (这名字让人想起CLAMP 
+        pred = torch.log(pred.clamp(min=1e-8))  # 方便实用的截断函数P 
         # 本损失函数中, 每个词的损失不对seqlen作规范化
         return self.label_smoothing(pred.view(seq_len * bsz, -1),
-                    gold.contiguous().view(seq_len * bsz, -1), mask.sum())
+                    gold.view(seq_len * bsz, -1)) / mask.sum() # avg loss
         
     def nll_loss(self, pred:torch.Tensor, gold, dec_lens):
         """
@@ -62,7 +62,6 @@ class Model(nn.Module):
             pred: seqlen, bsz, vocab
             gold: seqlen, bsz
         """
-        seqlen, bsz = gold.size()
         gold_prob = pred.gather(dim=2, index=gold.unsqueeze(2)).squeeze(2).clamp(min=1e-8)  # cross entropy
         gold_prob = gold_prob.log().masked_fill(gold.eq(self.padding_idx), 0.).sum(dim=0) / dec_lens   # batch内规范化
         return -gold_prob.mean()
@@ -71,7 +70,7 @@ class Model(nn.Module):
         if padding_mask is None: 
             padding_mask = inputs.eq(self.padding_idx)
         x = self.word_embed(inputs) + self.pos_embed(inputs)
-        x = F.dropout(self.emb_layer_norm(x), self.dropout, self.training)  #embed dropout
+        x = F.dropout(self.emb_layer_norm(x), p=self.dropout, training = self.training)  #embed dropout
 
         for layer in self.enc_layers:
             x, _, _ = layer(x, self_padding_mask=padding_mask)

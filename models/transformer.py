@@ -14,13 +14,13 @@ class TransformerLayer(nn.Module):
         self.self_attn = MultiheadAttention(embed_dim, num_heads, dropout, weights_dropout)
         self.fc1 = nn.Linear(embed_dim, ff_embed_dim)
         self.fc2 = nn.Linear(ff_embed_dim, embed_dim)
-        self.attn_layer_norm = nn.LayerNorm(embed_dim)
-        self.ff_layer_norm = nn.LayerNorm(embed_dim)
+        self.attn_layer_norm = nn.LayerNorm(embed_dim, eps = 1e-12)
+        self.ff_layer_norm = nn.LayerNorm(embed_dim, eps = 1e-12)
         self.with_external = with_external
-        self.dropout = dropout
+        self.dropout = nn.Dropout(p=dropout)
         if self.with_external:
             self.external_attn = MultiheadAttention(embed_dim, num_heads, dropout, weights_dropout)
-            self.external_layer_norm = nn.LayerNorm(embed_dim)
+            self.external_layer_norm = nn.LayerNorm(embed_dim, eps = 1e-12)
         self.reset_parameters()
     
     def reset_parameters(self):
@@ -51,10 +51,9 @@ class TransformerLayer(nn.Module):
 
         # Position-wise FF
         residual = x
-        x = gelu(self.fc1(x))
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.fc2(x)
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        #x = self.dropout(gelu(self.fc1(x)))
+        x = self.dropout(F.relu(self.fc1(x)))
+        x = self.dropout(self.fc2(x))
         x = self.ff_layer_norm(residual + x)
 
         return x, self_attn, external_attn
@@ -65,7 +64,7 @@ class MultiheadAttention(nn.Module):
         super(MultiheadAttention, self).__init__()
         self.embed_dim = embed_dim
         self.num_heads = num_heads
-        self.dropout = dropout
+        self.dropout = nn.Dropout(p=dropout)
         self.head_dim = embed_dim // num_heads
         assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
         self.scaling = self.head_dim ** -0.5
@@ -141,11 +140,11 @@ class MultiheadAttention(nn.Module):
         attn_weights = F.softmax(attn_weights, dim=-1)
         
         if self.weights_dropout:    # !!! attention 的 dropout...?
-            attn_weights = F.dropout(attn_weights, p=self.dropout, training=self.training)
+            attn_weights = self.dropout(attn_weights)
 
         attn = torch.bmm(attn_weights, v)
         if not self.weights_dropout:
-            attn = F.dropout(attn, p=self.dropout, training=self.training)
+            attn = self.dropout(attn)
 
         assert list(attn.size()) == [bsz * self.num_heads, tgt_len, self.head_dim]
 
@@ -208,7 +207,7 @@ class LearnedPositionalEmbedding(nn.Module):
     """
         This module produces LearnedPositionalEmbedding.
     """
-    def __init__(self, embedding_dim, init_size=1024, device=0):
+    def __init__(self, embedding_dim, init_size=512, device=0):
         super(LearnedPositionalEmbedding, self).__init__()
         self.weights = nn.Embedding(init_size, embedding_dim)   # nn.embedding 默认finetune
         self.device = device
@@ -267,6 +266,30 @@ class SinusoidalPositionalEmbedding(nn.Module):
         positions = offset + torch.arange(seq_len)  # seq_len * emb_dim
         res = self.weights.index_select(0, positions).unsqueeze(1).expand(-1, bsz, -1).to(self.device).detach()
         return res
+
+class SinusoidalPositionalEncoding(nn.Module):
+    """
+        Attention is All You Need ver.
+        Positional Encoding 的计算!
+        PE(pos, 2i) = sin(pos / (10000 ^ (2 * i / d_model)))
+    """
+    def __init__(self, d_model, max_size = 512, device=0):
+        super(SinusoidalPositionalEncoding, self).__init__()
+
+        pe = torch.zeros(max_size, d_model)
+        position = torch.arange(0, max_size).unsqueeze(1)
+        div = torch.exp(torch.arange(0, d_model, 2, dtype=torch.float) *
+                        - (math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position.float() * div)
+        pe[:, 1::2] = torch.cos(position.float() * div)
+        pe.unsqueeze_(1)
+        self.register_buffer('pe', pe)
+        self.device = device
+        
+    def forward(self, x):
+        seq_len, bsz = x.size()
+        return self.pe[:seq_len,:,:].expand(-1, bsz, -1).to(self.device).detach()
+
 
 def gelu(x):
     """
