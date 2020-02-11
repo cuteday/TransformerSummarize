@@ -25,8 +25,8 @@ def init_config(args):
 
         'hidden_size': 512,
         'emb_dim': 512,
-        'd_ff': 2048,
-        'num_layers': 6,
+        'd_ff': 1024,
+        'num_layers': 4,
         'num_heads': 8,
         'label_smoothing': 0.1,
         'dropout': 0.2,
@@ -35,7 +35,7 @@ def init_config(args):
         'betas': [0.9, 0.99],
 
         'learning_rate': 0.01,
-        'batch_size': 4,
+        'batch_size': 6,
         'gradient_accum': 8,
         'beam_size': 5,
         'validate_every': 50000,

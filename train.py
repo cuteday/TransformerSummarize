@@ -13,6 +13,7 @@ from utils.train_utils import logging, calc_running_avg_loss
 
 class Trainer:
     def __init__(self, config):
+        
         self.config = config
         self.step = 0
         self.vocab = Vocab(config['vocab_file'], config['vocab_size'])
@@ -26,15 +27,16 @@ class Trainer:
     def setup(self, config):
         
         self.model = Model(config).to(config['device'])
-        # 
         self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
         #self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
         checkpoint = None
+        
         if config['train_from'] != '':
             logging('Train from %s'%config['train_from'])
             checkpoint = torch.load(config['train_from'], map_location='cpu')
             self.model.load_state_dict(checkpoint['model'])
             self.step = checkpoint['step']
+            self.vocab = checkpoint['vocab']
             self.optimizer.load_state_dict(checkpoint['optimizer'])
 
     def train_one(self, batch):
@@ -96,7 +98,8 @@ class Trainer:
         state = {
             'model': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
-            'step': self.step
+            'step': self.step,
+            'vocab': self.vocab
         }
         save_path = os.path.join(self.config['model_path'], 'model_s%d.pt'%self.step)
         logging('Saving model step %d to %s...'%(self.step, save_path))
