@@ -13,6 +13,7 @@ from utils.train_utils import logging, calc_running_avg_loss
 
 class Trainer:
     def __init__(self, config):
+        
         self.config = config
         self.device = config['device']
         self.step = 0
@@ -36,10 +37,13 @@ class Trainer:
         self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
         # self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
         checkpoint = None
-        if config['train_from'] != '':
+        
+        if config['train_from'] != '':  # Counter在两次mostCommon间, 相同频率的元素可能以不同的次序输出...!
             logging('Train from %s'%config['train_from'])
             checkpoint = torch.load(config['train_from'], map_location='cpu')
             self.model.load_state_dict(checkpoint['model'])
+            self.step = checkpoint['step']
+            self.vocab = checkpoint['vocab']
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.step = checkpoint['step']
             # print('State dict parameters:')

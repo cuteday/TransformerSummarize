@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 from rouge import FilesRouge
 
+from models.model import Model
 from data import Vocab, CNNDMDataset, Collate
 from utils.train_utils import logging
 from utils.data_utils import get_input_from_batch, output2words
@@ -43,17 +44,18 @@ class Beam(object):
 
 class BeamSearch(object):
     """ 可可爱爱的标准Beam Search模板 """
-    def __init__(self, model, config, step):
+    def __init__(self, config):
         self.config = config
-        self.model = model.to(config['device'])
+        saved_model = torch.load(config['test_from'], map_location='cpu')
+        self.model = Model(config)
+        self.model.load_state_dict(saved_model['model'])
+        self.vocab = saved_model['vocab']
         
-        self._decode_dir = os.path.join(config['log_root'], 'decode_S%s' % str(step))
+        self._decode_dir = os.path.join(config['log_root'], 'decode_S%s' % str(config['step']))
         self._rouge_ref = os.path.join(self._decode_dir, 'rouge_ref')
         self._rouge_dec = os.path.join(self._decode_dir, 'rouge_dec')
 
         if not os.path.exists(self._decode_dir): os.mkdir(self._decode_dir)
-
-        self.vocab = Vocab(config['vocab_file'], config['vocab_size'])
         self.test_data = CNNDMDataset('test', config['data_path'], config, self.vocab)
         
     def sort_beams(self, beams):

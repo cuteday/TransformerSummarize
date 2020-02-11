@@ -51,7 +51,7 @@ class Batch:
         dec_tgt = [poi.dec_tgt for poi in batch]
         enc_inp = [poi.enc_inp for poi in batch]
         #print(dec_inp)
-
+        
         art_extend_vocab = [poi.art_extend_vocab for poi in batch]
 
         self.enc_lens = [len(src) for src in enc_inp]
