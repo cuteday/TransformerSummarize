@@ -26,11 +26,12 @@ class Model(nn.Module):
 
         self.attn_mask = SelfAttentionMask(device=self.device)
         self.word_embed = nn.Embedding(self.vocab_size, self.emb_dim, self.padding_idx)
-        self.pos_embed = SinusoidalPositionalEmbedding(self.emb_dim, device=self.device)
-        #self.pos_embed = LearnedPositionalEmbedding(self.emb_dim, device = self.device)
+        #self.pos_embed = SinusoidalPositionalEmbedding(self.emb_dim, device=self.device)
+        #self.pos_embed = SinusoidalPositionalEncoding(self.emb_dim, device=self.device)
+        self.pos_embed = LearnedPositionalEmbedding(self.emb_dim, device = self.device)
         self.enc_layers = nn.ModuleList()
         self.dec_layers = nn.ModuleList()
-        self.emb_layer_norm = nn.LayerNorm(self.emb_dim, eps = 1e-12)    # coverage not implemented...
+        self.emb_layer_norm = nn.LayerNorm(self.emb_dim, eps = 1e-12)    # copy & coverage not implemented...
         self.word_prob = WordProbLayer(self.hidden_size, self.vocab_size, self.device, self.dropout, copy=self.copy)
         self.label_smoothing = LabelSmoothing(self.device, self.vocab_size, self.padding_idx, self.smoothing)
 
