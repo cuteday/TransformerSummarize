@@ -97,17 +97,13 @@ def get_input_from_batch(batch, config, device, batch_first = False):
         if batch.max_art_oovs > 0:
             extra_zeros = Variable(torch.zeros((batch_size, 1, batch.max_art_oovs), device = device))
     
-    if config['coverage']:
-        coverage = torch.zeros(enc_batch.size(), device=device)
-        c_t_1 = torch.zeros(batch_size, 2 * config['hidden_size'], device = device)  # accumulated coverage vector
-        
     if not batch_first:
         enc_batch.transpose_(0, 1)
         enc_pad_mask.transpose_(0, 1)
         if config['copy'] and extra_zeros is not None:
             extra_zeros.transpose_(0, 1)
 
-    return enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage
+    return enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros
 
 def get_output_from_batch(batch, device, batch_first = False):
     """ returns: dec_batch, dec_pad_mask, max_dec_len, dec_lens_var, tgt_batch """

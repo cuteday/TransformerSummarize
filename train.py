@@ -26,10 +26,6 @@ class Trainer:
         self.validate_data = CNNDMDataset('val', config['data_path'], config, self.vocab)
         
         self.setup(config)
-        names = [n for n,_ in self.model.named_parameters()]
-        # print('Named parameters:')
-        # for n in names:
-        #     print(n) 
 
     def setup(self, config):
         
@@ -47,7 +43,7 @@ class Trainer:
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.step = checkpoint['step']
             # print('State dict parameters:')
-            # for n in checkpoint['model'].keys():
+            # for n in model.state_dict().keys():
             #     print(n)  
         #self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
 
@@ -55,11 +51,12 @@ class Trainer:
     def train_one(self, batch):
         """ coverage not implemented """
         config = self.config
-        enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage = \
+        enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros = \
             get_input_from_batch(batch, config, self.device)
         dec_batch, dec_padding_mask, max_dec_len, dec_lens_var, target_batch = \
             get_output_from_batch(batch, self.device)
         pred = self.model(enc_batch, dec_batch, enc_padding_mask, dec_padding_mask, enc_batch_extend_vocab, extra_zeros)
+        # >>>>>>>> DEBUG Session <<<<<<<<<
         # print("ENC\n")
         # print(enc_batch)
         # print("DEC\n")
