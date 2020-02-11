@@ -38,13 +38,13 @@ class TransformerLayer(nn.Module):
         residual = x
         x, self_attn = self.self_attn(query=x, key=x, value=x, key_padding_mask=self_padding_mask, attn_mask=self_attn_mask, need_weights = need_weights)
 
-        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.dropout(x)
         x = self.attn_layer_norm(residual + x)  # norm前都接dropout嗷
 
         if self.with_external:
             residual = x
             x, external_attn = self.external_attn(query=x, key=external_memories, value=external_memories, key_padding_mask=external_padding_mask, need_weights = need_weights)
-            x = F.dropout(x, p=self.dropout, training=self.training)
+            x = self.dropout(x)
             x = self.external_layer_norm(residual + x)
         else:
             external_attn = None
@@ -223,30 +223,6 @@ class LearnedPositionalEmbedding(nn.Module):
         positions = (offset + torch.arange(seq_len)).to(self.device)
         res = self.weights(positions).unsqueeze(1).expand(-1, bsz, -1)
         return res
-
-class SinusoidalPositionalEncoding(nn.Module):
-    """
-        Attention is All You Need ver.
-        Positional Encoding 的计算!
-        PE(pos, 2i) = sin(pos / (10000 ^ (2 * i / d_model)))
-    """
-    def __init__(self, d_model, max_size = 512, device=0):
-        super(SinusoidalPositionalEncoding, self).__init__()
-
-        pe = torch.zeros(max_size, d_model)
-        position = torch.arange(0, max_size).unsqueeze(1)
-        div = torch.exp(torch.arange(0, d_model, 2, dtype=torch.float) *
-                        - (math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position.float() * div)
-        pe[:, 1::2] = torch.cos(position.float() * div)
-        pe.unsqueeze_(1)
-        self.register_buffer('pe', pe)
-        self.device = device
-        
-    def forward(self, x):
-        seq_len, bsz = x.size()
-        return self.pe[:seq_len,:,:].expand(-1, bsz, -1).to(self.device).detach()
-
 
 class SinusoidalPositionalEncoding(nn.Module):
     """

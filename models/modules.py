@@ -5,8 +5,6 @@ import torch.nn.functional as F
 from models.transformer import MultiheadAttention
 from utils.initialize import init_linear_weight
 
-
-
 class WordProbLayer(nn.Module):
     def __init__(self, hidden_size, dict_size, device, dropout, copy=False, coverage=False):
         super(WordProbLayer, self).__init__()

@@ -21,11 +21,12 @@ class Model(nn.Module):
         self.padding_idx = config['padding_idx']
         self.num_layers = config['num_layers']
         self.num_heads = config['num_heads']
-        self.dropout = config['dropout']
         self.smoothing = config['label_smoothing']
         self.is_predicting = config['is_predicting']
         self.copy = config['copy']
 
+        dropout = config['dropout']
+        self.dropout = nn.Dropout(p=dropout)
         self.attn_mask = SelfAttentionMask(device=self.device)
         self.word_embed = nn.Embedding(self.vocab_size, self.emb_dim, self.padding_idx)
         #self.pos_embed = SinusoidalPositionalEmbedding(self.emb_dim, device=self.device)
@@ -34,12 +35,12 @@ class Model(nn.Module):
         self.enc_layers = nn.ModuleList()
         self.dec_layers = nn.ModuleList()
         self.emb_layer_norm = LayerNorm(self.emb_dim, eps = 1e-12)    # copy & coverage not implemented...
-        self.word_prob = WordProbLayer(self.hidden_size, self.vocab_size, self.device, self.dropout, copy=self.copy)
+        self.word_prob = WordProbLayer(self.hidden_size, self.vocab_size, self.device, dropout, copy=self.copy)
         self.label_smoothing = LabelSmoothing(self.device, self.vocab_size, self.padding_idx, self.smoothing)
 
         for _ in range(self.num_layers):
-            self.enc_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,self.dropout))
-            self.dec_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,self.dropout, with_external=True))
+            self.enc_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,dropout))
+            self.dec_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,dropout, with_external=True))
 
         #self.reset_parameters()
 
@@ -57,7 +58,7 @@ class Model(nn.Module):
         pred = torch.log(pred.clamp(min=1e-8))  # 方便实用的截断函数P 
         # 本损失函数中, 每个词的损失不对seqlen作规范化
         return self.label_smoothing(pred.view(seq_len * bsz, -1),
-                    gold.view(seq_len * bsz, -1)) / mask.sum() # avg loss
+                    gold.contiguous().view(seq_len * bsz, -1)) / mask.sum() # avg loss
         
     def nll_loss(self, pred:torch.Tensor, gold, dec_lens):
         """
@@ -73,7 +74,7 @@ class Model(nn.Module):
         if padding_mask is None: 
             padding_mask = inputs.eq(self.padding_idx)
         x = self.word_embed(inputs) + self.pos_embed(inputs)
-        x = F.dropout(self.emb_layer_norm(x), p=self.dropout, training = self.training)  #embed dropout
+        x = self.dropout(self.emb_layer_norm(x))
 
         for layer in self.enc_layers:
             x, _, _ = layer(x, self_padding_mask=padding_mask)
@@ -87,7 +88,7 @@ class Model(nn.Module):
         if not self.is_predicting and padding_mask is None:
             padding_mask = inputs.eq(self.padding_idx)
         x = self.word_embed(inputs) + self.pos_embed(inputs)
-        x = F.dropout(self.emb_layer_norm(x), self.dropout, self.training)
+        x = self.dropout(self.emb_layer_norm(x))
         emb = x
 
         self_attn_mask = self.attn_mask(seqlen)
