@@ -34,14 +34,14 @@ def init_config(args):
 
         'betas': [0.9, 0.99],
 
-        'learning_rate': 0.06,
+        'learning_rate': 0.05,
         'batch_size': 8,
         'gradient_accum': 8,
         'beam_size': 5,
         'validate_every': 50000,
         'report_every': 100,
         'save_every': 50000,
-        'train_epoch': 8,
+        'train_epoch': 10,
 
     }
     for key in args.keys():

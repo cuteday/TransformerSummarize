@@ -5,6 +5,8 @@ import torch.nn.functional as F
 from models.transformer import MultiheadAttention
 from utils.initialize import init_linear_weight
 
+
+
 class WordProbLayer(nn.Module):
     def __init__(self, hidden_size, dict_size, device, dropout, copy=False, coverage=False):
         super(WordProbLayer, self).__init__()
@@ -93,27 +95,4 @@ class LabelSmoothing(nn.Module):
         model_prob.masked_fill_((target == self.padding_idx), 0.)
 
         return F.kl_div(output, model_prob, reduction='sum')/float(normalize)
-
-class LayerNorm(nn.Module):
-    """
-        LayerNorm的原型函数... 
-        说的那么麻烦...其实就是沿最后一维作标准化
-        为了不让取值集中在0附近(失去激活函数的非线性性质), 它还非常贴心地添加了平移和缩放功能...!
-    """
-    def __init__(self, hidden_size, eps=1e-12):
-        super(LayerNorm, self).__init__()
-        self.weight = nn.Parameter(torch.Tensor(hidden_size))
-        self.bias = nn.Parameter(torch.Tensor(hidden_size))
-        self.eps = eps
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.constant_(self.weight, 1.)
-        nn.init.constant_(self.bias, 0.)
-    
-    def forward(self, x):
-        u = x.mean(-1, keepdim=True)
-        s = (x - u).pow(2).mean(-1, keepdim=True)
-        x = (x - u) / torch.sqrt(s + self.eps)
-        return self.weight * x + self.bias
 

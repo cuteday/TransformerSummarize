@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+#from torch.nn import LayerNorm
+from models.transformer import LayerNorm
 
-from models.transformer import TransformerLayer, SinusoidalPositionalEmbedding, SelfAttentionMask, LearnedPositionalEmbedding, SinusoidalPositionalEncoding
+from models.transformer import TransformerLayer, SelfAttentionMask, LearnedPositionalEmbedding, SinusoidalPositionalEncoding
 from models.modules import WordProbLayer, LabelSmoothing
 from utils.initialize import init_uniform_weight
 
@@ -31,7 +33,7 @@ class Model(nn.Module):
         self.pos_embed = LearnedPositionalEmbedding(self.emb_dim, device = self.device)
         self.enc_layers = nn.ModuleList()
         self.dec_layers = nn.ModuleList()
-        self.emb_layer_norm = nn.LayerNorm(self.emb_dim, eps = 1e-12)    # copy & coverage not implemented...
+        self.emb_layer_norm = LayerNorm(self.emb_dim, eps = 1e-12)    # copy & coverage not implemented...
         self.word_prob = WordProbLayer(self.hidden_size, self.vocab_size, self.device, self.dropout, copy=self.copy)
         self.label_smoothing = LabelSmoothing(self.device, self.vocab_size, self.padding_idx, self.smoothing)
 
@@ -39,7 +41,7 @@ class Model(nn.Module):
             self.enc_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,self.dropout))
             self.dec_layers.append(TransformerLayer(self.hidden_size, self.d_ff,self.num_heads,self.dropout, with_external=True))
 
-        self.reset_parameters()
+        #self.reset_parameters()
 
     def reset_parameters(self):
         init_uniform_weight(self.word_embed.weight)

@@ -14,28 +14,34 @@ from utils.train_utils import logging, calc_running_avg_loss
 class Trainer:
     def __init__(self, config):
         self.config = config
+        self.device = config['device']
         self.step = 0
         self.vocab = Vocab(config['vocab_file'], config['vocab_size'])
         self.train_data = CNNDMDataset('train', config['data_path'], config, self.vocab)
         self.validate_data = CNNDMDataset('val', config['data_path'], config, self.vocab)
-        # self.model = Model(config).to(device)
-        # self.optimizer = None
+        
         self.setup(config)
-        self.device = config['device']
+        names = [n for n,_ in self.model.named_parameters()]
+        print('Named parameters:')
+        for n in names:
+            print(n) 
 
     def setup(self, config):
         
         self.model = Model(config).to(config['device'])
         self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
-        #self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
         checkpoint = None
         if config['train_from'] != '':
             logging('Train from %s'%config['train_from'])
             checkpoint = torch.load(config['train_from'], map_location='cpu')
             self.model.load_state_dict(checkpoint['model'])
-            self.step = checkpoint['step']
-            self.optimizer = Adagrad(self.model.parameters(),lr = config['learning_rate'], initial_accumulator_value=0.1)
             self.optimizer.load_state_dict(checkpoint['optimizer'])
+            self.step = checkpoint['step']
+            print('State dict parameters:')
+            for n in checkpoint['model'].keys():
+                print(n)  
+        #self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
+
 
     def train_one(self, batch):
         """ coverage not implemented """
@@ -54,7 +60,7 @@ class Trainer:
     def train(self):
 
         config = self.config
-        train_loader = DataLoader(self.train_data, batch_size=config['batch_size'], shuffle=False, collate_fn=Collate())
+        train_loader = DataLoader(self.train_data, batch_size=config['batch_size'], shuffle=True, collate_fn=Collate())
 
         running_avg_loss = 0
         self.model.train()
@@ -101,3 +107,8 @@ class Trainer:
         save_path = os.path.join(self.config['model_path'], 'model_s%d.pt'%self.step)
         logging('Saving model step %d to %s...'%(self.step, save_path))
         torch.save(state, save_path)
+
+    def save_(self):
+        save_path = os.path.join(self.config['model_path'], 'model_s%d.pt'%self.step)
+        logging('Saving model step %d to %s...'%(self.step, save_path))
+        torch.save(self.model, save_path)

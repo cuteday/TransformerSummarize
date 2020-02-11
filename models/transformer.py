@@ -14,13 +14,13 @@ class TransformerLayer(nn.Module):
         self.self_attn = MultiheadAttention(embed_dim, num_heads, dropout, weights_dropout)
         self.fc1 = nn.Linear(embed_dim, ff_embed_dim)
         self.fc2 = nn.Linear(ff_embed_dim, embed_dim)
-        self.attn_layer_norm = nn.LayerNorm(embed_dim, eps = 1e-12)
-        self.ff_layer_norm = nn.LayerNorm(embed_dim, eps = 1e-12)
+        self.attn_layer_norm = LayerNorm(embed_dim, eps = 1e-12)
+        self.ff_layer_norm = LayerNorm(embed_dim, eps = 1e-12)
         self.with_external = with_external
         self.dropout = dropout
         if self.with_external:
             self.external_attn = MultiheadAttention(embed_dim, num_heads, dropout, weights_dropout)
-            self.external_layer_norm = nn.LayerNorm(embed_dim, eps = 1e-12)
+            self.external_layer_norm = LayerNorm(embed_dim, eps = 1e-12)
         self.reset_parameters()
     
     def reset_parameters(self):
@@ -51,7 +51,7 @@ class TransformerLayer(nn.Module):
 
         # Position-wise FF
         residual = x
-        x = gelu(self.fc1(x))
+        x = F.relu(self.fc1(x))
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.fc2(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
@@ -208,7 +208,7 @@ class LearnedPositionalEmbedding(nn.Module):
     """
         This module produces LearnedPositionalEmbedding.
     """
-    def __init__(self, embedding_dim, init_size=512, device=0):
+    def __init__(self, embedding_dim, init_size=405, device=0):
         super(LearnedPositionalEmbedding, self).__init__()
         self.weights = nn.Embedding(init_size, embedding_dim)   # nn.embedding 默认finetune
         self.device = device
@@ -256,3 +256,27 @@ def gelu(x):
     """
     cdf = 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
     return cdf*x
+
+
+class LayerNorm(nn.Module):
+    """
+        LayerNorm的原型函数... 
+        说的那么麻烦...其实就是沿最后一维作标准化
+        为了不让取值集中在0附近(失去激活函数的非线性性质), 它还非常贴心地添加了平移和缩放功能...!
+    """
+    def __init__(self, hidden_size, eps=1e-12):
+        super(LayerNorm, self).__init__()
+        self.weight = nn.Parameter(torch.Tensor(hidden_size))
+        self.bias = nn.Parameter(torch.Tensor(hidden_size))
+        self.eps = eps
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.constant_(self.weight, 1.)
+        nn.init.constant_(self.bias, 0.)
+    
+    def forward(self, x):
+        u = x.mean(-1, keepdim=True)
+        s = (x - u).pow(2).mean(-1, keepdim=True)
+        x = (x - u) / torch.sqrt(s + self.eps)
+        return self.weight * x + self.bias
