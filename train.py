@@ -31,7 +31,7 @@ class Trainer:
         #self.optimizer = Adam(self.model.parameters(),lr = config['learning_rate'],betas = config['betas'])
         checkpoint = None
         
-        if config['train_from'] != '':
+        if config['train_from'] != '':  # Counter在两次mostCommon间, 相同频率的元素可能以不同的次序输出...!
             logging('Train from %s'%config['train_from'])
             checkpoint = torch.load(config['train_from'], map_location='cpu')
             self.model.load_state_dict(checkpoint['model'])
