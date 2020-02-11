@@ -12,7 +12,6 @@ def make_vocab(wc, vocab_size):
     word2id, id2word = {}, {}
     for i, t in enumerate(special_tokens):
         word2id[t], id2word[i] = i, t
-    print(wc.most_common(10000))
     for i, (w, _) in enumerate(wc.most_common(vocab_size - len(special_tokens)), len(special_tokens)):
         word2id[w], id2word[i] = i, w
     return word2id, id2word
@@ -81,21 +80,18 @@ def get_input_from_batch(batch, config, device, batch_first = False):
         如果config没有启用pointer 和cov 则相应的项返回None
     """
 
-    enc_batch = Variable(batch.enc_inp).to(device)
-    enc_pad_mask = Variable(batch.enc_pad_mask).to(device)
+    enc_batch = batch.enc_inp.to(device)
+    enc_pad_mask = batch.enc_pad_mask.to(device)
     batch_size = enc_batch.size(0)
-       
     enc_lens = batch.enc_lens
     extra_zeros = None
     enc_batch_extend_vocab = None
-    coverage = None
-    c_t_1 = None
 
     if config['copy']:
-        enc_batch_extend_vocab = Variable(batch.art_batch_extend_vocab).long().to(device)
+        enc_batch_extend_vocab = batch.art_batch_extend_vocab.to(device)
         # max_art_oovs is the max over all the article oov list in the batch
         if batch.max_art_oovs > 0:
-            extra_zeros = Variable(torch.zeros((batch_size, 1, batch.max_art_oovs), device = device))
+            extra_zeros = torch.zeros((batch_size, 1, batch.max_art_oovs), device = device)
     
     if not batch_first:
         enc_batch.transpose_(0, 1)
@@ -113,10 +109,10 @@ def get_output_from_batch(batch, device, batch_first = False):
     # 每一句的总loss除以它的词数
     max_dec_len = max(dec_lens)
 
-    dec_batch = Variable(batch.dec_inp).to(device)
-    dec_pad_mask = Variable(batch.dec_pad_mask).to(device)
-    tgt_batch = Variable(batch.dec_tgt).to(device)
-    dec_lens_var = Variable(dec_lens_var).to(device)
+    dec_batch = batch.dec_inp.to(device)
+    dec_pad_mask = batch.dec_pad_mask.to(device)
+    tgt_batch = batch.dec_tgt.to(device)
+    dec_lens_var = dec_lens_var.to(device)
 
     if not batch_first:
         dec_batch.transpose_(0, 1)
