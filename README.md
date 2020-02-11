@@ -1,6 +1,6 @@
 # TransformerSummarize
 A simple implementation of transformer for Abstractive Summarization.(PyTorch)\
-almost finished ψ(｀∇´)ψ
+not finished ψ(｀∇´)ψ
 
 Data pre-process instructions at: https://github.com/ChenRocks/cnn-dailymail \
 
