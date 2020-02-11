@@ -2,4 +2,6 @@
 .vscode/settings.json
 utils/variables.py
 poi.py
+ref
+dec
 *.pyc
