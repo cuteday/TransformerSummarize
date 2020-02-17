@@ -97,10 +97,10 @@ class Model(nn.Module):
             x,_,_ = layer(x, self_padding_mask=padding_mask, self_attn_mask=self_attn_mask,
                     external_memories=src, external_padding_mask=src_padding_mask)
         if self.copy:
-            pred, _ = self.word_prob(x, emb, memory=src, src_mask=src_padding_mask,
+            pred, attn = self.word_prob(x, emb, memory=src, src_mask=src_padding_mask,
                         tokens = src_extend_vocab, extra_zeros= extra_zeros)
-        else: pred, _ = self.word_prob(x)
-        return pred
+        else: pred, attn = self.word_prob(x)
+        return pred, attn
 
     def forward(self, src, tgt, src_padding_mask=None, tgt_padding_mask=None,
             src_extend_vocab = None, extra_zeros = None):       # if copy enabled
@@ -108,4 +108,5 @@ class Model(nn.Module):
             src&tgt: seqlen, bsz
         """ 
         src_enc, src_padding_mask = self.encode(src, src_padding_mask)
-        return self.decode(tgt, src_enc, src_padding_mask, tgt_padding_mask, src_extend_vocab, extra_zeros)
+        pred, attn = self.decode(tgt, src_enc, src_padding_mask, tgt_padding_mask, src_extend_vocab, extra_zeros)
+        return pred

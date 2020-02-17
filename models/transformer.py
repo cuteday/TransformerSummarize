@@ -88,6 +88,7 @@ class MultiheadAttention(nn.Module):
             key_padding_mask: seqlen x batch
             attn_mask:  tgt_len x src_len
             mask 1 为忽略项
+            returns: attn[tgtlen * bsz * srclen]
         """
 
         # 通过数据指针判断是自注意力还是...

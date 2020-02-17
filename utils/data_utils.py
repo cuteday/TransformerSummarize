@@ -82,8 +82,9 @@ def get_input_from_batch(batch, config, device, batch_first = False):
 
     enc_batch = batch.enc_inp.to(device)
     enc_pad_mask = batch.enc_pad_mask.to(device)
-    batch_size = enc_batch.size(0)
+    batch_size, seqlen = enc_batch.size()
     enc_lens = batch.enc_lens
+    coverage_1 = torch.zeros((batch_size, seqlen), device=device)
     extra_zeros = None
     enc_batch_extend_vocab = None
 
@@ -99,7 +100,7 @@ def get_input_from_batch(batch, config, device, batch_first = False):
         if config['copy'] and extra_zeros is not None:
             extra_zeros.transpose_(0, 1)
 
-    return enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros
+    return enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, coverage_1
 
 def get_output_from_batch(batch, device, batch_first = False):
     """ returns: dec_batch, dec_pad_mask, max_dec_len, dec_lens_var, tgt_batch """
