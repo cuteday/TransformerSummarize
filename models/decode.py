@@ -49,9 +49,10 @@ class BeamSearch(object):
         saved_model = torch.load(config['test_from'], map_location='cpu')
         self.model = Model(config)
         self.model.load_state_dict(saved_model['model'])
+        self.model.to(config['device'])
         self.vocab = saved_model['vocab']
         
-        self._decode_dir = os.path.join(config['log_root'], 'decode_S%s' % str(config['step']))
+        self._decode_dir = os.path.join(config['log_root'], 'decode_S%s' % str(saved_model['step']))
         self._rouge_ref = os.path.join(self._decode_dir, 'rouge_ref')
         self._rouge_dec = os.path.join(self._decode_dir, 'rouge_dec')
 

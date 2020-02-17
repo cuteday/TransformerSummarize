@@ -26,7 +26,7 @@ class Trainer:
         self.validate_data = CNNDMDataset('val', config['data_path'], config, self.vocab)
         
         self.setup(config)
-        names = [n for n,_ in self.model.named_parameters()]
+        #names = [n for n,_ in self.model.named_parameters()]
         # print('Named parameters:')
         # for n in names:
         #     print(n) 
@@ -45,7 +45,6 @@ class Trainer:
             self.step = checkpoint['step']
             self.vocab = checkpoint['vocab']
             self.optimizer.load_state_dict(checkpoint['optimizer'])
-            self.step = checkpoint['step']
             # print('State dict parameters:')
             # for n in checkpoint['model'].keys():
             #     print(n)  
@@ -104,7 +103,6 @@ class Trainer:
                     logging("Step %d Train loss %.3f"%(self.step, running_avg_loss))    
                 if self.step % config['save_every'] == 0:
                     self.save()
-                    self.save_()
                 if self.step % config['validate_every'] == 0:
                     self.validate()
 

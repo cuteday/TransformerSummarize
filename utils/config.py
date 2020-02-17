@@ -8,7 +8,7 @@ def init_config(args):
         'log_root': '../',
         'data_path': variables.CNNDMPath,
         'vocab_file': variables.CNNDMPath + '/vocab_cnt.pkl',
-        'model_path': '../saved_models_lpe',
+        'model_path': '../saved_models_copy',
         'log_path': '../results',
 
         'max_src_ntokens': 400,
@@ -34,8 +34,8 @@ def init_config(args):
 
         'betas': [0.9, 0.99],
 
-        'learning_rate': 0.05,
-        'batch_size': 8,
+        'learning_rate': 0.04,
+        'batch_size': 6,
         'gradient_accum': 8,
         'beam_size': 5,
         'validate_every': 50000,

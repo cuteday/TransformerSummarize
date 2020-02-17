@@ -6,7 +6,7 @@ from models.decode import BeamSearch
 
 def train(config):
     trainer = Trainer(config)
-    trainer.validate()
+    #trainer.validate()
     trainer.train()
     trainer.save()
 
