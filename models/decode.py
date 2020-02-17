@@ -12,22 +12,22 @@ from utils.train_utils import logging
 from utils.data_utils import get_input_from_batch, output2words
 from tqdm import tqdm
 
-## beam search hyp-parameters
+## Crimson Resolve
 alpha = 0.9
+beta = 0
 
 class Beam(object):
-    def __init__(self, tokens, log_probs, state=None, context=None, coverage=None):
+    def __init__(self, tokens, log_probs, state=None, coverage=None):
         self.tokens = tokens
         self.log_probs = log_probs
         self.state = state
-        self.context = context
         self.coverage = coverage
 
     def extend(self, token, log_prob, state = None, coverage = None):
         return Beam(tokens = self.tokens + [token],
                         log_probs = self.log_probs + [log_prob],
                         state = state,
-                        coverage = coverage)
+                        coverage = self.coverage + coverage)
 
     @property
     def latest_token(self):
@@ -39,8 +39,10 @@ class Beam(object):
 
     @property
     def decay_prob(self):
-        penalty = ((5.0+(len(self.tokens)+1))/6.0)**alpha
-        return sum(self.log_probs) / penalty
+        # length penalty with coverage
+        penalty = ((5.0+(len(self.tokens) + 1)) / 6.0)**alpha
+        c_scores = -beta*(self.coverage.clamp_min(1).sum() - self.coverage.size(0))
+        return sum(self.log_probs) / penalty + c_scores
 
 class BeamSearch(object):
     """ 可可爱爱的标准Beam Search模板 """
@@ -118,12 +120,11 @@ class BeamSearch(object):
         """
             TODOS:
             add tri-gram blocking
-            add alpha/beta length controlling
             add coverage mechanism xD
         """
         config = self.config
         # batch should have only one example
-        enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_0, coverage_t_0 = \
+        enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, coverage_t_0 = \
             get_input_from_batch(batch, config, config['device'])
 
         encoder_outputs, padding_mask = self.model.encode(enc_batch, enc_padding_mask)
@@ -138,9 +139,11 @@ class BeamSearch(object):
         while steps < config['max_dec_steps'] and len(results) < config['beam_size']:
             hyp_tokens = torch.tensor([h.tokens for h in beams],device=config['device']).transpose(0,1) # NOT batch first
             hyp_tokens.masked_fill_(hyp_tokens>=self.vocab.size, self.vocab.word2id('<unk>'))# convert oov to unk
-            pred = self.model.decode(hyp_tokens, encoder_outputs, padding_mask, None,
+            pred, attn = self.model.decode(hyp_tokens, encoder_outputs, padding_mask, None,
                                      enc_batch_extend_vocab, extra_zeros)
 
+            # gather attention at current step
+            attn = attn[-1,:,:]   # attn: [bsz * src_len]
             log_probs = torch.log(pred[-1,:,:])         # get probs for next token
             topk_log_probs, topk_ids = torch.topk(log_probs, config['beam_size'] * 2)  # avoid all <end> tokens in top-k
 
@@ -151,7 +154,8 @@ class BeamSearch(object):
                 # here save states, context vec and coverage...
                 for j in range(config['beam_size'] * 2):  # for each of the top 2*beam_size hyps:
                     new_beam = h.extend(token=topk_ids[i, j].item(),
-                                   log_prob=topk_log_probs[i, j].item())
+                                   log_prob=topk_log_probs[i, j].item(),
+                                   coverage=attn[i])
                     all_beams.append(new_beam)
 
             beams = []

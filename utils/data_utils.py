@@ -80,33 +80,27 @@ def get_input_from_batch(batch, config, device, batch_first = False):
         如果config没有启用pointer 和cov 则相应的项返回None
     """
 
-    enc_batch = Variable(batch.enc_inp).to(device)
-    enc_pad_mask = Variable(batch.enc_pad_mask).to(device)
-    batch_size = enc_batch.size(0)
-       
+    enc_batch = batch.enc_inp.to(device)
+    enc_pad_mask = batch.enc_pad_mask.to(device)
+    batch_size, seqlen = enc_batch.size()
     enc_lens = batch.enc_lens
+    coverage_1 = torch.zeros((batch_size, seqlen), device=device)
     extra_zeros = None
     enc_batch_extend_vocab = None
-    coverage = None
-    c_t_1 = None
 
     if config['copy']:
-        enc_batch_extend_vocab = Variable(batch.art_batch_extend_vocab).long().to(device)
+        enc_batch_extend_vocab = batch.art_batch_extend_vocab.to(device)
         # max_art_oovs is the max over all the article oov list in the batch
         if batch.max_art_oovs > 0:
-            extra_zeros = Variable(torch.zeros((batch_size, 1, batch.max_art_oovs), device = device))
+            extra_zeros = torch.zeros((batch_size, 1, batch.max_art_oovs), device = device)
     
-    if config['coverage']:
-        coverage = torch.zeros(enc_batch.size(), device=device)
-        c_t_1 = torch.zeros(batch_size, 2 * config['hidden_size'], device = device)  # accumulated coverage vector
-        
     if not batch_first:
         enc_batch.transpose_(0, 1)
         enc_pad_mask.transpose_(0, 1)
         if config['copy'] and extra_zeros is not None:
             extra_zeros.transpose_(0, 1)
 
-    return enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage
+    return enc_batch, enc_pad_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, coverage_1
 
 def get_output_from_batch(batch, device, batch_first = False):
     """ returns: dec_batch, dec_pad_mask, max_dec_len, dec_lens_var, tgt_batch """
@@ -116,10 +110,10 @@ def get_output_from_batch(batch, device, batch_first = False):
     # 每一句的总loss除以它的词数
     max_dec_len = max(dec_lens)
 
-    dec_batch = Variable(batch.dec_inp).to(device)
-    dec_pad_mask = Variable(batch.dec_pad_mask).to(device)
-    tgt_batch = Variable(batch.dec_tgt).to(device)
-    dec_lens_var = Variable(dec_lens_var).to(device)
+    dec_batch = batch.dec_inp.to(device)
+    dec_pad_mask = batch.dec_pad_mask.to(device)
+    tgt_batch = batch.dec_tgt.to(device)
+    dec_lens_var = dec_lens_var.to(device)
 
     if not batch_first:
         dec_batch.transpose_(0, 1)
