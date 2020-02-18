@@ -26,13 +26,6 @@ class Trainer:
         self.validate_data = CNNDMDataset('val', config['data_path'], config, self.vocab)
         
         self.setup(config)
-<<<<<<< HEAD
-        #names = [n for n,_ in self.model.named_parameters()]
-        # print('Named parameters:')
-        # for n in names:
-        #     print(n) 
-=======
->>>>>>> f98e7e055705c10764938ac450474c64fe0afe91
 
     def setup(self, config):
         

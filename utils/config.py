@@ -20,8 +20,8 @@ def init_config(args):
 
         'is_predicting': False,
         'device': torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-        'copy': False,
-        'coverage': False,
+        'copy': True,
+        'coverage': True,
 
         'hidden_size': 512,
         'emb_dim': 512,
