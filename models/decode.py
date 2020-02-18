@@ -33,7 +33,7 @@ class Beam(object):
     @property
     def c_score(self):
         return 0 if self.coverage is None else\
-                 -beta*(self.coverage.clamp_min(1).sum() - self.coverage.size(0))
+                 -beta*(self.coverage.clamp_min(1.).sum() - self.coverage.size(0))
 
     @property
     def latest_token(self):
@@ -51,7 +51,7 @@ class Beam(object):
     def decay_prob(self):
         # length penalty with coverage
         penalty = ((5.0+(len(self.tokens) + 1)) / 6.0)**alpha
-        return (sum(self.log_probs)+self.c_score) / penalty
+        return sum(self.log_probs)/ penalty
 
 class BeamSearch(object):
     """ 可可爱爱的标准Beam Search模板 """
@@ -103,7 +103,6 @@ class BeamSearch(object):
         config = self.config
         start = time.time()
         self.model.eval()       # ...! qwq
-        counter = 0
         test_loader = DataLoader(self.test_data, batch_size=1, shuffle = False, collate_fn=Collate(beam_size = config["beam_size"]))
         
         ref = open(self._rouge_ref, 'w')
@@ -119,12 +118,6 @@ class BeamSearch(object):
             ref.write(original_abstract + '\n')
             dec.write(decoded_abstract + '\n')
 
-            counter += 1
-            if counter % 1000 == 0:
-                print('%d example in %d sec'%(counter, time.time() - start))
-                start = time.time()
-
-        print("Decoder has finished reading dataset for single_pass.")
         ref.close()
         dec.close()
         self.report_rouge(self._rouge_ref, self._rouge_dec)
@@ -156,7 +149,8 @@ class BeamSearch(object):
                                      enc_batch_extend_vocab, extra_zeros)
 
             # gather attention at current step
-            attn = attn[-1,:,:]   # attn: [bsz * src_len]
+            attn = attn[-1,:,:]  # attn: [bsz * src_len]
+            print(attn.size())
             log_probs = torch.log(pred[-1,:,:])         # get probs for next token
             topk_log_probs, topk_ids = torch.topk(log_probs, config['beam_size'] * 2)  # avoid all <end> tokens in top-k
             # print(topk_ids)
@@ -178,8 +172,8 @@ class BeamSearch(object):
                     if steps >= config['min_dec_steps']:
                         results.append(h)
                 else: beams.append(h)
-                if len(beams) == config['beam_size'] or len(results) == config['beam_size']:
-                    break
+                # if len(beams) == config['beam_size'] or len(results) == config['beam_size']:
+                #     break
             steps += 1
 
         if len(results) == 0:

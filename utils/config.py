@@ -14,7 +14,7 @@ def init_config(args):
         'max_src_ntokens': 400,
         'max_tgt_ntokens': 100,
         'max_dec_steps': 120,
-        'min_dec_steps': 35,
+        'min_dec_steps': 20,
         'vocab_size': 50000,
         'padding_idx': 0,
 
