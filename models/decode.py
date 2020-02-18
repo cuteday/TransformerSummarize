@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 ## Crimson Resolve
 alpha = 0.9
-beta = 0
+beta = 5.
 
 class Beam(object):
     def __init__(self, tokens, log_probs, state=None, coverage=None):
@@ -27,7 +27,13 @@ class Beam(object):
         return Beam(tokens = self.tokens + [token],
                         log_probs = self.log_probs + [log_prob],
                         state = state,
-                        coverage = self.coverage + coverage)
+                        coverage = None if coverage is None\
+                                    else (self.coverage+coverage))
+
+    @property
+    def c_score(self):
+        return 0 if self.coverage is None else\
+                 -beta*(self.coverage.clamp_min(1.).sum() - self.coverage.size(0))
 
     @property
     def latest_token(self):
@@ -38,11 +44,14 @@ class Beam(object):
         return sum(self.log_probs) / len(self.tokens)
 
     @property
+    def coverage_prob(self):
+        return sum(self.log_probs) + self.c_score
+
+    @property
     def decay_prob(self):
         # length penalty with coverage
         penalty = ((5.0+(len(self.tokens) + 1)) / 6.0)**alpha
-        c_scores = -beta*(self.coverage.clamp_min(1).sum() - self.coverage.size(0))
-        return sum(self.log_probs) / penalty + c_scores
+        return sum(self.log_probs)/ penalty
 
 class BeamSearch(object):
     """ 可可爱爱的标准Beam Search模板 """
@@ -51,9 +60,10 @@ class BeamSearch(object):
         saved_model = torch.load(config['test_from'], map_location='cpu')
         self.model = Model(config)
         self.model.load_state_dict(saved_model['model'])
+        self.model.to(config['device'])
         self.vocab = saved_model['vocab']
         
-        self._decode_dir = os.path.join(config['log_root'], 'decode_S%s' % str(config['step']))
+        self._decode_dir = os.path.join(config['log_root'], 'decode_S%s' % str(saved_model['step']))
         self._rouge_ref = os.path.join(self._decode_dir, 'rouge_ref')
         self._rouge_dec = os.path.join(self._decode_dir, 'rouge_dec')
 
@@ -61,6 +71,9 @@ class BeamSearch(object):
         self.test_data = CNNDMDataset('test', config['data_path'], config, self.vocab)
         
     def sort_beams(self, beams):
+        return sorted(beams, key=lambda h: h.coverage_prob, reverse=True)
+
+    def sort_hypos(self, beams):
         return sorted(beams, key=lambda h: h.decay_prob, reverse=True)
 
     @staticmethod
@@ -85,11 +98,11 @@ class BeamSearch(object):
         decoded_abstract = ' '.join(decoded_words)
         return decoded_abstract
 
+    @torch.no_grad()
     def decode(self):
         config = self.config
         start = time.time()
         self.model.eval()       # ...! qwq
-        counter = 0
         test_loader = DataLoader(self.test_data, batch_size=1, shuffle = False, collate_fn=Collate(beam_size = config["beam_size"]))
         
         ref = open(self._rouge_ref, 'w')
@@ -105,12 +118,6 @@ class BeamSearch(object):
             ref.write(original_abstract + '\n')
             dec.write(decoded_abstract + '\n')
 
-            counter += 1
-            if counter % 1000 == 0:
-                print('%d example in %d sec'%(counter, time.time() - start))
-                start = time.time()
-
-        print("Decoder has finished reading dataset for single_pass.")
         ref.close()
         dec.close()
         self.report_rouge(self._rouge_ref, self._rouge_dec)
@@ -142,7 +149,8 @@ class BeamSearch(object):
                                      enc_batch_extend_vocab, extra_zeros)
 
             # gather attention at current step
-            attn = attn[-1,:,:]   # attn: [bsz * src_len]
+            attn = attn[-1,:,:]  # attn: [bsz * src_len]
+            print(attn.size())
             log_probs = torch.log(pred[-1,:,:])         # get probs for next token
             topk_log_probs, topk_ids = torch.topk(log_probs, config['beam_size'] * 2)  # avoid all <end> tokens in top-k
 
@@ -154,7 +162,7 @@ class BeamSearch(object):
                 for j in range(config['beam_size'] * 2):  # for each of the top 2*beam_size hyps:
                     new_beam = h.extend(token=topk_ids[i, j].item(),
                                    log_prob=topk_log_probs[i, j].item(),
-                                   coverage=attn[i])
+                                   coverage=attn[i] if config['coverage'] else None)
                     all_beams.append(new_beam)
 
             beams = []
@@ -163,13 +171,13 @@ class BeamSearch(object):
                     if steps >= config['min_dec_steps']:
                         results.append(h)
                 else: beams.append(h)
-                if len(beams) == config['beam_size'] or len(results) == config['beam_size']:
-                    break
+                # if len(beams) == config['beam_size'] or len(results) == config['beam_size']:
+                #     break
             steps += 1
 
         if len(results) == 0:
             results = beams
 
-        beams_sorted = self.sort_beams(results)
+        beams_sorted = self.sort_hypos(results)
 
         return beams_sorted[0]

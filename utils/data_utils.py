@@ -84,7 +84,7 @@ def get_input_from_batch(batch, config, device, batch_first = False):
     enc_pad_mask = batch.enc_pad_mask.to(device)
     batch_size, seqlen = enc_batch.size()
     enc_lens = batch.enc_lens
-    coverage_1 = torch.zeros((batch_size, seqlen), device=device)
+    coverage_1 = torch.zeros((batch_size, seqlen))
     extra_zeros = None
     enc_batch_extend_vocab = None
 
@@ -92,7 +92,7 @@ def get_input_from_batch(batch, config, device, batch_first = False):
         enc_batch_extend_vocab = batch.art_batch_extend_vocab.to(device)
         # max_art_oovs is the max over all the article oov list in the batch
         if batch.max_art_oovs > 0:
-            extra_zeros = torch.zeros((batch_size, 1, batch.max_art_oovs), device = device)
+            extra_zeros = torch.zeros((batch_size, 1, batch.max_art_oovs), device = device, requires_grad=False)
     
     if not batch_first:
         enc_batch.transpose_(0, 1)
