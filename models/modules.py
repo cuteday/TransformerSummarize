@@ -72,13 +72,13 @@ class LabelSmoothing(nn.Module):
 
     def forward(self, output, target):
         """
-            支持扩展词典, 比如copy机制使用的src词典
+            support extending the dictionary from source
             input size: bsz*seq_en, vocab
-            return: 0维tensor
+            return: 0-dim tensor
         """
         real_size = output.size(1)  
         if real_size > self.size:
-            real_size -= self.size  # real size即扩展词典的大小
+            real_size -= self.size  # real size is the size of extended dictionary
         else:
             real_size = 0   
 
@@ -86,8 +86,6 @@ class LabelSmoothing(nn.Module):
         if real_size > 0: 
             ext_zeros = torch.full((model_prob.size(0), real_size), self.smoothing_value).to(self.device)
             model_prob = torch.cat((model_prob, ext_zeros), -1)
-        # @scatter 的正确使用方法
-        # 只有被声明的那一维拥有与src和index不同的维数
         model_prob.scatter_(1, target, self.confidence)
         model_prob.masked_fill_((target == self.padding_idx), 0.)
 

@@ -24,7 +24,7 @@ class Example:
         abs_extend_vocab = abstract2ids(abstract_words, vocab, self.art_oovs)
 
         if config['copy']:      
-            # 改写目标输出 反映COPY OOV
+            # change the output to visualize the [OOV] token
             _, self.dec_tgt = self.get_dec_inp_tgt(abs_extend_vocab, config['max_tgt_ntokens'])
 
         self.original_article = article
@@ -34,7 +34,6 @@ class Example:
         inp = [start_id] + sequence[:]
         target = sequence[:]
         if len(inp) > max_len:  # truncate
-            # 如果需要截断，就不保留End Token
             inp = inp[:max_len]
             target = target[:max_len]
         else: # no truncation
@@ -44,7 +43,7 @@ class Example:
 
 class Batch:
     def __init__(self, batch):
-        # 过滤掉他们（我有特别的filter技巧~）
+        # filter the problematic input samples
         batch = list(filter(lambda poi: len(poi.enc_inp)>0, batch))
 
         dec_inp = [poi.dec_inp for poi in batch]

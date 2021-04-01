@@ -3,7 +3,7 @@ from torch import nn
 import random
 import numpy as np
 
-seed = 114514   # 24岁, 是魔法带学生
+seed = 1       # assign a random seed for reproducing results
 
 def init_seeds():
     random.seed(seed)

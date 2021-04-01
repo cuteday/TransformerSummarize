@@ -54,7 +54,7 @@ class Beam(object):
         return sum(self.log_probs)/ penalty
 
 class BeamSearch(object):
-    """ 可可爱爱的标准Beam Search模板 """
+    """ standard BeamSearch template """
     def __init__(self, config):
         self.config = config
         saved_model = torch.load(config['test_from'], map_location='cpu')

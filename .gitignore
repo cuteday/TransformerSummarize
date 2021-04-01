@@ -5,3 +5,4 @@ poi.py
 ref
 dec
 *.pyc
+.DS_Store

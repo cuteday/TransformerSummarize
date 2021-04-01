@@ -8,7 +8,7 @@ class TransformerLayer(nn.Module):
     
     def __init__(self, embed_dim, ff_embed_dim, num_heads, dropout, with_external=False, weights_dropout = True):
         """
-            external: 外部注意力(target to source)
+            external: exterior attention (target to source)
         """
         super(TransformerLayer, self).__init__()
         self.self_attn = MultiheadAttention(embed_dim, num_heads, dropout, weights_dropout)
@@ -69,7 +69,7 @@ class MultiheadAttention(nn.Module):
         assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
         self.scaling = self.head_dim ** -0.5
 
-        # in_proj: | q | k | v |, 这些参数给F.linear用 
+        # in_proj: | q | k | v |, parameters for F.linear
         self.in_proj_weight = Parameter(torch.Tensor(3 * embed_dim, embed_dim))
         self.in_proj_bias = Parameter(torch.Tensor(3 * embed_dim))
 
@@ -87,18 +87,18 @@ class MultiheadAttention(nn.Module):
         """ 
             key_padding_mask: seqlen x batch
             attn_mask:  tgt_len x src_len
-            mask 1 为忽略项
+            mask: 1 is ignored
             returns: attn[tgtlen * bsz * srclen]
         """
 
-        # 通过数据指针判断是自注意力还是...
+        # data pointer for judging whether it is self-attention or src-attention
         qkv_same = query.data_ptr() == key.data_ptr() == value.data_ptr()   # py支持连等号的奥
         kv_same = key.data_ptr() == value.data_ptr()
 
         tgt_len, bsz, embed_dim = query.size()
         assert key.size() == value.size()
 
-        if qkv_same: # 合在一起是能加快速度么...
+        if qkv_same: # combine them (for speed?)
             # self-attention
             q, k, v = self.in_proj_qkv(query)
         elif kv_same:
@@ -155,7 +155,7 @@ class MultiheadAttention(nn.Module):
         if need_weights:
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             #attn_weights, _ = attn_weights.max(dim=1)  # max pooling
-            #attn_weights = attn_weights[:, 0, :, :]    # 只拿第k个head > <
+            #attn_weights = attn_weights[:, 0, :, :]    # 
             attn_weights = attn_weights.mean(dim=1)    # mean pooling
             attn_weights = attn_weights.transpose(0, 1)
         else:
@@ -215,7 +215,7 @@ class LearnedPositionalEmbedding(nn.Module):
         self.reset_parameters()
     
     def reset_parameters(self):
-        """ 跟词向量采用了相同的初始化方式...! """
+        """ The same initializing method with word vector """
         nn.init.normal_(self.weights.weight, std=0.02)
 
     def forward(self, inputs, offset=0):
@@ -228,7 +228,6 @@ class LearnedPositionalEmbedding(nn.Module):
 class SinusoidalPositionalEncoding(nn.Module):
     """
         Attention is All You Need ver.
-        Positional Encoding 的计算!
         PE(pos, 2i) = sin(pos / (10000 ^ (2 * i / d_model)))
     """
     def __init__(self, d_model, max_size = 512, device=0):
@@ -252,7 +251,7 @@ class SinusoidalPositionalEncoding(nn.Module):
 def gelu(x):
     """
         GeLU(x) = x * \\phi(x)  
-        phi(x)是正态概率分布函数, 即error function
+        phi(x) is the PDF of the Gaussian Distribution, i.e. the ERF
     """
     cdf = 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
     return cdf*x
@@ -260,9 +259,7 @@ def gelu(x):
 
 class LayerNorm(nn.Module):
     """
-        LayerNorm的原型函数... 
-        说的那么麻烦...其实就是沿最后一维作标准化
-        为了不让取值集中在0附近(失去激活函数的非线性性质), 它还非常贴心地添加了平移和缩放功能...!
+        LayerNorm
     """
     def __init__(self, hidden_size, eps=1e-12):
         super(LayerNorm, self).__init__()
